@@ -1,0 +1,116 @@
+@import "tailwindcss";
+
+@theme {
+  --color-bg-primary: #0d1117;
+  --color-bg-secondary: #161b22;
+  --color-bg-tertiary: #1c2128;
+  --color-accent-blue: #58a6ff;
+  --color-accent-purple: #bc8cff;
+  --color-accent-gold: #e3b341;
+  --color-accent-teal: #3fb950;
+  --color-accent-pink: #f778ba;
+  --color-accent-orange: #f0883e;
+  --color-text-primary: #e6edf3;
+  --color-text-secondary: #8b949e;
+  --color-text-muted: #484f58;
+  --color-border: #30363d;
+  --font-display: 'Inter', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+}
+
+@layer base {
+  * {
+    @apply box-border;
+  }
+  
+  html {
+    scroll-behavior: smooth;
+  }
+  
+  body {
+    @apply bg-bg-primary text-text-primary font-display antialiased;
+    background-image: 
+      radial-gradient(ellipse at top, rgba(88, 166, 255, 0.03) 0%, transparent 50%),
+      radial-gradient(ellipse at bottom right, rgba(188, 140, 255, 0.03) 0%, transparent 50%);
+    min-height: 100vh;
+  }
+
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-bg-secondary;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-border rounded-full;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-text-muted;
+  }
+}
+
+@layer components {
+  .glass {
+    @apply bg-bg-secondary/80 backdrop-blur-xl border border-border/50;
+  }
+
+  .glow-blue {
+    box-shadow: 0 0 20px rgba(88, 166, 255, 0.3), 0 0 40px rgba(88, 166, 255, 0.1);
+  }
+
+  .glow-purple {
+    box-shadow: 0 0 20px rgba(188, 140, 255, 0.3), 0 0 40px rgba(188, 140, 255, 0.1);
+  }
+
+  .glow-gold {
+    box-shadow: 0 0 20px rgba(227, 179, 65, 0.3), 0 0 40px rgba(227, 179, 65, 0.1);
+  }
+
+  .text-gradient {
+    @apply bg-gradient-to-r from-accent-blue via-accent-purple to-accent-pink bg-clip-text text-transparent;
+  }
+
+  .node {
+    @apply w-12 h-12 rounded-full flex items-center justify-center font-mono text-sm font-bold transition-all duration-300;
+  }
+
+  .node-growing {
+    @apply bg-accent-orange/20 border-2 border-accent-orange text-accent-orange;
+  }
+
+  .node-shrinking {
+    @apply bg-accent-blue/20 border-2 border-accent-blue text-accent-blue;
+  }
+
+  .node-loop {
+    @apply bg-accent-gold/20 border-2 border-accent-gold text-accent-gold;
+  }
+
+  .control-input {
+    @apply bg-bg-tertiary border border-border rounded-lg px-4 py-2 text-text-primary font-mono focus:outline-none focus:border-accent-blue focus:ring-1 focus:ring-accent-blue/50 transition-all;
+  }
+
+  .btn-primary {
+    @apply bg-accent-blue hover:bg-accent-blue/80 text-bg-primary font-semibold px-6 py-2 rounded-lg transition-all duration-200 hover:shadow-[0_0_20px_rgba(88,166,255,0.4)];
+  }
+
+  .btn-secondary {
+    @apply bg-bg-tertiary hover:bg-border text-text-primary border border-border px-6 py-2 rounded-lg transition-all duration-200;
+  }
+}
+
+@layer utilities {
+  .animation-delay-100 {
+    animation-delay: 100ms;
+  }
+  .animation-delay-200 {
+    animation-delay: 200ms;
+  }
+  .animation-delay-300 {
+    animation-delay: 300ms;
+  }
+}
