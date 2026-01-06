@@ -1,90 +1,180 @@
 import { motion } from 'framer-motion'
-import VisualizationCard from '@/components/visualization-card'
+import { Link } from 'react-router-dom'
+import { useEffect, useRef } from 'react'
 
 const visualizations = [
     {
+        id: 'collatz',
         title: 'Collatz Conjecture',
-        description: 'Watch numbers dance through the famous 3n+1 problem, always finding their way to the 4-2-1 loop.',
+        symbol: '3n+1',
+        description: 'The infinite descent into the 4-2-1 loop',
         to: '/collatz',
-        icon: '∞',
-        accentColor: 'orange' as const,
     },
     {
+        id: 'sorting',
         title: 'Sorting Algorithms',
-        description: 'Race Bubble, Merge, and Quick Sort side-by-side. See which algorithm conquers the chaos fastest.',
+        symbol: 'O(n)',
+        description: 'Racing complexity through ordered chaos',
         to: '/sorting',
-        icon: '⇅',
-        accentColor: 'blue' as const,
     },
     {
+        id: 'euclidean',
         title: 'Euclidean Algorithm',
-        description: 'Discover the greatest common divisor through elegant rectangle subdivisions.',
+        symbol: 'gcd',
+        description: 'Finding common ground through division',
         to: '/euclidean',
-        icon: '÷',
-        accentColor: 'teal' as const,
     },
     {
+        id: 'matrix',
         title: 'Matrix Multiplication',
-        description: 'Visualize the dot product dance as rows meet columns to create new matrices.',
+        symbol: 'A×B',
+        description: 'The dot product dance of rows and columns',
         to: '/matrix',
-        icon: '⊗',
-        accentColor: 'purple' as const,
     },
     {
+        id: 'binary',
         title: 'Binary Search',
-        description: 'Witness the power of divide and conquer as the search space collapses logarithmically.',
+        symbol: 'log₂',
+        description: 'Divide and conquer in logarithmic time',
         to: '/binary-search',
-        icon: '⌖',
-        accentColor: 'gold' as const,
     },
 ]
 
+function TensorBackground() {
+    const canvasRef = useRef<HTMLCanvasElement>(null)
+
+    useEffect(() => {
+        const canvas = canvasRef.current
+        if (!canvas) return
+
+        const ctx = canvas.getContext('2d')
+        if (!ctx) return
+
+        const resize = () => {
+            canvas.width = window.innerWidth
+            canvas.height = window.innerHeight
+        }
+        resize()
+        window.addEventListener('resize', resize)
+
+        let frame = 0
+        const animate = () => {
+            frame++
+            ctx.clearRect(0, 0, canvas.width, canvas.height)
+
+            const gridSize = 80
+            const time = frame * 0.01
+
+            for (let x = 0; x < canvas.width + gridSize; x += gridSize) {
+                for (let y = 0; y < canvas.height + gridSize; y += gridSize) {
+                    const i = Math.floor(x / gridSize)
+                    const j = Math.floor(y / gridSize)
+
+                    const tensorValue = Math.sin(i * 0.3 + time) * Math.cos(j * 0.3 + time * 0.7)
+                    const alpha = Math.abs(tensorValue) * 0.15 + 0.02
+
+                    ctx.strokeStyle = `rgba(255, 255, 255, ${alpha})`
+                    ctx.lineWidth = 1
+
+                    ctx.beginPath()
+                    ctx.moveTo(x, y)
+                    ctx.lineTo(x + gridSize, y)
+                    ctx.stroke()
+
+                    ctx.beginPath()
+                    ctx.moveTo(x, y)
+                    ctx.lineTo(x, y + gridSize)
+                    ctx.stroke()
+
+                    if (Math.abs(tensorValue) > 0.7) {
+                        ctx.fillStyle = `rgba(255, 255, 255, ${Math.abs(tensorValue) * 0.08})`
+                        ctx.beginPath()
+                        ctx.arc(x, y, 3, 0, Math.PI * 2)
+                        ctx.fill()
+                    }
+                }
+            }
+
+            requestAnimationFrame(animate)
+        }
+
+        const animId = requestAnimationFrame(animate)
+        return () => {
+            window.removeEventListener('resize', resize)
+            cancelAnimationFrame(animId)
+        }
+    }, [])
+
+    return <canvas ref={canvasRef} className="fixed inset-0 pointer-events-none" />
+}
+
 export default function Hub() {
     return (
-        <div className="space-y-16">
-            <motion.section
-                initial={{ opacity: 0, y: -20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6 }}
-                className="text-center space-y-6"
-            >
-                <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-accent-blue/10 border border-accent-blue/20 text-accent-blue text-sm">
-                    <span className="w-2 h-2 rounded-full bg-accent-blue animate-pulse" />
-                    Interactive Mathematics
+        <div className="min-h-screen relative">
+            <TensorBackground />
+
+            <div className="relative z-10 px-8 py-16 max-w-6xl mx-auto">
+                <motion.header
+                    initial={{ opacity: 0, y: -20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.8 }}
+                    className="mb-16"
+                >
+                    <h1 className="text-5xl md:text-6xl font-light tracking-tight mb-3">
+                        Conjecture
+                    </h1>
+                    <p className="text-text-muted text-lg tracking-wide">
+                        View Abstractions
+                    </p>
+                </motion.header>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                    {visualizations.map((viz, index) => (
+                        <motion.div
+                            key={viz.id}
+                            initial={{ opacity: 0, y: 30 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.5, delay: index * 0.1 }}
+                        >
+                            <Link to={viz.to} className="group block">
+                                <div className="relative overflow-hidden rounded-2xl backdrop-blur-xl bg-white/[0.03] border border-white/[0.08] p-6 transition-all duration-300 hover:bg-white/[0.06] hover:border-white/[0.15] hover:shadow-[0_8px_32px_rgba(0,0,0,0.3)]">
+                                    <div className="absolute top-4 right-4 text-3xl font-mono text-white/10 group-hover:text-white/20 transition-colors">
+                                        {viz.symbol}
+                                    </div>
+
+                                    <h3 className="text-xl font-medium mb-2 group-hover:text-white transition-colors">
+                                        {viz.title}
+                                    </h3>
+
+                                    <p className="text-text-muted text-sm leading-relaxed">
+                                        {viz.description}
+                                    </p>
+
+                                    <div className="mt-4 flex items-center text-text-dim text-xs group-hover:text-text-muted transition-colors">
+                                        <span>Explore</span>
+                                        <svg className="w-4 h-4 ml-1 transform group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                                        </svg>
+                                    </div>
+
+                                    <div className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" style={{
+                                        background: 'radial-gradient(600px circle at var(--mouse-x, 50%) var(--mouse-y, 50%), rgba(255,255,255,0.03), transparent 40%)'
+                                    }} />
+                                </div>
+                            </Link>
+                        </motion.div>
+                    ))}
                 </div>
 
-                <h1 className="text-5xl md:text-7xl font-bold">
-                    <span className="text-gradient">Explore</span>
-                    <br />
-                    <span className="text-text-primary">Mathematical Beauty</span>
-                </h1>
-
-                <p className="text-text-secondary text-lg max-w-2xl mx-auto leading-relaxed">
-                    Dive into interactive visualizations of algorithms and mathematical concepts.
-                    Each visualization brings abstract ideas to life through animation and interactivity.
-                </p>
-            </motion.section>
-
-            <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {visualizations.map((viz, index) => (
-                    <VisualizationCard
-                        key={viz.to}
-                        {...viz}
-                        index={index}
-                    />
-                ))}
-            </section>
-
-            <motion.section
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 0.6, delay: 0.5 }}
-                className="text-center py-12"
-            >
-                <p className="text-text-muted text-sm">
-                    Built with React, Framer Motion, and love for mathematics
-                </p>
-            </motion.section>
+                <motion.footer
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.8 }}
+                    className="mt-20 text-center text-text-dim text-xs tracking-wider"
+                >
+                    Interactive mathematical explorations
+                </motion.footer>
+            </div>
         </div>
     )
 }
