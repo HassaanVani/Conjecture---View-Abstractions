@@ -146,29 +146,74 @@ const ap2Units: Unit[] = [
                 symbol: 'ρVg',
                 description: 'Archimedes principle and fluid dynamics',
                 to: '/physics/fluids/buoyancy',
-                comingSoon: true
+            },
+            {
+                id: 'flow',
+                title: 'Fluid Dynamics',
+                symbol: 'A₁v₁=A₂v₂',
+                description: 'Bernoulli principle and continuity equation',
+                to: '/physics/fluids/flow',
             },
         ],
     },
     {
         number: 2,
         title: 'Thermodynamics',
-        visualizations: [],
+        visualizations: [
+            {
+                id: 'gas',
+                title: 'Ideal Gas Law',
+                symbol: 'PV=nRT',
+                description: 'Kinetic molecular theory and particle physics',
+                to: '/physics/thermo/gas',
+            },
+        ],
     },
     {
         number: 3,
         title: 'Electric Force, Field & Potential',
-        visualizations: [],
+        visualizations: [
+            {
+                id: 'fields',
+                title: 'Electric Fields',
+                symbol: 'E=kQ/r²',
+                description: 'Field mapping and superposition',
+                to: '/physics/electro/fields',
+            },
+        ],
     },
     {
         number: 4,
         title: 'Electric Circuits',
-        visualizations: [],
+        visualizations: [
+            {
+                id: 'rc',
+                title: 'RC Circuit',
+                symbol: 'τ=RC',
+                description: 'Capacitor charging and exponential decay',
+                to: '/physics/circuits/rc',
+            },
+        ],
     },
     {
         number: 5,
         title: 'Magnetism & Induction',
-        visualizations: [],
+        visualizations: [
+            {
+                id: 'particle',
+                title: 'Particle in B-Field',
+                symbol: 'F=qvB',
+                description: 'Lorentz force and cyclotron motion',
+                to: '/physics/magnetism/particle',
+            },
+            {
+                id: 'flux',
+                title: 'Faraday\'s Law',
+                symbol: 'ε=-dΦ/dt',
+                description: 'Magnetic flux and induced EMF',
+                to: '/physics/magnetism/flux',
+            },
+        ],
     },
     {
         number: 6,
