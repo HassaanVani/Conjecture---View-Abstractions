@@ -12,6 +12,14 @@ import FibonacciSpiral from '@/pages/math/fibonacci-spiral'
 // Physics
 import Pendulum from '@/pages/physics/pendulum'
 import WaveInterference from '@/pages/physics/wave-interference'
+import PhysicsHub from '@/pages/physics/ap-hub'
+import ProjectileMotion from '@/pages/physics/kinematics/projectile'
+import InclinePlane from '@/pages/physics/dynamics/incline'
+import Orbit from '@/pages/physics/circular/orbit'
+import EnergyCoaster from '@/pages/physics/energy/coaster'
+import Collision from '@/pages/physics/momentum/collision'
+import SpringMass from '@/pages/physics/shm/spring'
+import TorqueBalance from '@/pages/physics/rotation/balance'
 
 // Biology
 import CellDivision from '@/pages/biology/cell-division'
@@ -57,8 +65,18 @@ export default function App() {
             <Route path="/math/fibonacci" element={<FibonacciSpiral />} />
 
             {/* Physics */}
+            <Route path="/physics" element={<PhysicsHub />} />
             <Route path="/physics/pendulum" element={<Pendulum />} />
             <Route path="/physics/waves" element={<WaveInterference />} />
+
+            {/* AP Physics Units */}
+            <Route path="/physics/kinematics/projectile" element={<ProjectileMotion />} />
+            <Route path="/physics/dynamics/incline" element={<InclinePlane />} />
+            <Route path="/physics/circular/orbit" element={<Orbit />} />
+            <Route path="/physics/energy/coaster" element={<EnergyCoaster />} />
+            <Route path="/physics/momentum/collision" element={<Collision />} />
+            <Route path="/physics/shm/spring" element={<SpringMass />} />
+            <Route path="/physics/rotation/balance" element={<TorqueBalance />} />
 
             {/* Biology */}
             <Route path="/biology/cell-division" element={<CellDivision />} />

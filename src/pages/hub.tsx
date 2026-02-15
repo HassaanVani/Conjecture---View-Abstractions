@@ -75,18 +75,11 @@ const departments: DepartmentData[] = [
         bgColor: '#0d0a1a',
         visualizations: [
             {
-                id: 'pendulum',
-                title: 'Pendulum Motion',
-                symbol: 'θ',
-                description: 'Simple harmonic motion and chaos',
-                to: '/physics/pendulum',
-            },
-            {
-                id: 'waves',
-                title: 'Wave Interference',
-                symbol: '≋',
-                description: 'Superposition of traveling waves',
-                to: '/physics/waves',
+                id: 'ap-physics',
+                title: 'AP Physics Hub',
+                symbol: '🍎',
+                description: 'Full AP curriculum for Physics 1 & 2',
+                to: '/physics',
             },
         ],
     },
