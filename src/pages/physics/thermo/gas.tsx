@@ -77,9 +77,7 @@ export default function IdealGas() {
             const cx = width / 2
             const cy = height / 2
             const left = cx - boxW / 2
-            const right = cx + boxW / 2
             const top = cy - boxH / 2
-            const bottom = cy + boxH / 2
 
             if (isRunning) {
                 // Determine pressure (momentum change per area)
@@ -240,8 +238,8 @@ export default function IdealGas() {
                         <button
                             onClick={() => setIsRunning(!isRunning)}
                             className={`flex-1 py-3 rounded-xl font-medium text-sm transition-all ${isRunning
-                                    ? 'bg-yellow-500/20 text-yellow-400 hover:bg-yellow-500/30'
-                                    : 'bg-green-500 text-white hover:bg-green-400'
+                                ? 'bg-yellow-500/20 text-yellow-400 hover:bg-yellow-500/30'
+                                : 'bg-green-500 text-white hover:bg-green-400'
                                 }`}
                         >
                             {isRunning ? 'Freeze' : 'Unfreeze'}
