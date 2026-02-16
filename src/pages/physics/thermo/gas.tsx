@@ -1,53 +1,90 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { Link } from 'react-router-dom'
 import { PhysicsBackground } from '@/components/backgrounds'
+import { ControlPanel, ControlGroup, Slider, Button, ButtonGroup } from '@/components/control-panel'
+import { EquationDisplay } from '@/components/equation-display'
+import { InfoPanel, APTag } from '@/components/info-panel'
+import { DemoMode, useDemoMode, type DemoStep } from '@/components/demo-mode'
+
+const PHYSICS_COLOR = 'rgb(160, 100, 255)'
 
 interface Particle {
     x: number
     y: number
     vx: number
     vy: number
-    color: string
+    speed: number
 }
+
+type ProcessType = 'free' | 'isothermal' | 'adiabatic' | 'isobaric'
 
 export default function IdealGas() {
     const canvasRef = useRef<HTMLCanvasElement>(null)
     const [isRunning, setIsRunning] = useState(true)
-
-    // PV = nRT
-    const [temperature, setTemperature] = useState(300) // Kelvin
-    const [volume, setVolume] = useState(1.0) // 0.5 to 1.5 multiplier
-    const [particleCount, setParticleCount] = useState(50) // n
-
+    const [temperature, setTemperature] = useState(300)
+    const [volume, setVolume] = useState(1.0)
+    const [particleCount, setParticleCount] = useState(80)
+    const [process, setProcess] = useState<ProcessType>('free')
+    const [showDistribution, setShowDistribution] = useState(true)
     const particlesRef = useRef<Particle[]>([])
+    const wallHitsRef = useRef(0)
+    const tempRef = useRef(temperature)
 
-    // Initialize Particles
-    useEffect(() => {
+    const initParticles = useCallback((count: number, temp: number, vol: number) => {
         const particles: Particle[] = []
-        for (let i = 0; i < particleCount; i++) {
+        const speedScale = Math.sqrt(temp / 300) * 3
+        for (let i = 0; i < count; i++) {
+            const angle = Math.random() * Math.PI * 2
+            const sp = (0.5 + Math.random() * 2) * speedScale
             particles.push({
-                x: Math.random() * 400,
-                y: Math.random() * 300,
-                vx: (Math.random() - 0.5) * Math.sqrt(temperature) * 20,
-                vy: (Math.random() - 0.5) * Math.sqrt(temperature) * 20,
-                color: `hsl(${200 + Math.random() * 40}, 70%, 50%)`
+                x: (Math.random() - 0.5) * 300 * vol,
+                y: (Math.random() - 0.5) * 220,
+                vx: Math.cos(angle) * sp,
+                vy: Math.sin(angle) * sp,
+                speed: sp,
             })
         }
-        particlesRef.current = particles
-    }, [particleCount])
+        return particles
+    }, [])
 
-    // Update speeds when temperature changes
-    // v_rms proportional to sqrt(T)
-    const tempRef = useRef(temperature)
     useEffect(() => {
-        const oldT = tempRef.current
-        const ratio = Math.sqrt(temperature / oldT)
+        particlesRef.current = initParticles(particleCount, temperature, volume)
+        tempRef.current = temperature
+    }, [particleCount, initParticles])
+
+    useEffect(() => {
+        const ratio = Math.sqrt(temperature / tempRef.current)
         particlesRef.current.forEach(p => {
-            p.vx *= ratio
-            p.vy *= ratio
+            p.vx *= ratio; p.vy *= ratio
+            p.speed = Math.sqrt(p.vx * p.vx + p.vy * p.vy)
         })
         tempRef.current = temperature
     }, [temperature])
+
+    useEffect(() => {
+        if (process === 'isothermal') {
+            // PV = const => T fixed already
+        } else if (process === 'adiabatic') {
+            // TV^(gamma-1) = const, gamma=5/3 for monatomic
+            const gamma = 5 / 3
+            const T0 = 300
+            const V0 = 1.0
+            const newT = T0 * Math.pow(V0 / volume, gamma - 1)
+            setTemperature(Math.round(Math.max(50, Math.min(800, newT))))
+        }
+    }, [volume, process])
+
+    const demoSteps: DemoStep[] = [
+        { title: 'Ideal Gas Law', description: 'PV = nRT connects pressure, volume, amount, and temperature of an ideal gas.', highlight: 'Watch particle motion as a model of gas behavior.' },
+        { title: 'Temperature & Speed', description: 'Temperature is the average kinetic energy of particles. Higher T means faster particles.', setup: () => { setTemperature(500); setVolume(1.0); setProcess('free') }, highlight: 'Increase temperature and watch particle speeds rise.' },
+        { title: 'Volume & Pressure', description: 'Decreasing volume forces particles closer, increasing wall collisions (pressure).', setup: () => { setVolume(0.6); setTemperature(300) }, highlight: 'Smaller box = more collisions = higher pressure.' },
+        { title: 'Maxwell-Boltzmann Distribution', description: 'Particle speeds follow a statistical distribution. The peak shifts right at higher temperatures.', setup: () => { setShowDistribution(true); setTemperature(300) }, highlight: 'The speed distribution graph shows the spread of particle velocities.' },
+        { title: 'Isothermal Process', description: 'Temperature stays constant. If volume decreases, pressure increases proportionally (PV = const).', setup: () => { setProcess('isothermal'); setVolume(1.0) }, highlight: 'Select Isothermal and change volume.' },
+        { title: 'Adiabatic Process', description: 'No heat exchange. Compressing the gas increases temperature (TV^(gamma-1) = const).', setup: () => { setProcess('adiabatic'); setVolume(1.0) }, highlight: 'Compress the gas and watch temperature rise automatically.' },
+        { title: 'Isobaric Process', description: 'Constant pressure. Heating the gas expands the volume proportionally.', setup: () => { setProcess('isobaric'); setTemperature(300); setVolume(1.0) }, highlight: 'In isobaric mode, V changes with T to keep P constant.' },
+    ]
+
+    const demo = useDemoMode(demoSteps)
 
     useEffect(() => {
         const canvas = canvasRef.current
@@ -55,154 +92,138 @@ export default function IdealGas() {
         const ctx = canvas.getContext('2d')
         if (!ctx) return
 
+        let dpr = window.devicePixelRatio || 1
         const resize = () => {
-            // We'll keep logic coords fixed and scale drawing
-            canvas.width = canvas.offsetWidth * window.devicePixelRatio
-            canvas.height = canvas.offsetHeight * window.devicePixelRatio
-            ctx.scale(window.devicePixelRatio, window.devicePixelRatio)
+            dpr = window.devicePixelRatio || 1
+            canvas.width = canvas.offsetWidth * dpr
+            canvas.height = canvas.offsetHeight * dpr
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
         }
         resize()
         window.addEventListener('resize', resize)
 
         let animId: number
-        const dt = 0.01
-
         const animate = () => {
-            const width = canvas.offsetWidth
-            const height = canvas.offsetHeight
-
-            // Container Box Dimensions
-            const boxW = 400 * volume
-            const boxH = 300
-            const cx = width / 2
-            const cy = height / 2
-            const left = cx - boxW / 2
-            const top = cy - boxH / 2
+            const w = canvas.offsetWidth
+            const h = canvas.offsetHeight
+            const boxW = 380 * volume
+            const boxH = 260
+            const cx = w * 0.4
+            const cy = h * 0.45
+            const halfW = boxW / 2
+            const halfH = boxH / 2
 
             if (isRunning) {
-                // Determine pressure (momentum change per area)
-                // P = F/A. F = dp/dt.
-                // We could calculate actual collisions with walls or just ideal gas law.
-                // Let's sim collisions for visuals.
-
+                wallHitsRef.current = 0
                 particlesRef.current.forEach(p => {
-                    p.x += p.vx * dt
-                    p.y += p.vy * dt
-
-                    // Box Collisions
-                    // We need to map particle internal coords (0-400, 0-300) to centered box?
-                    // Correction: initialized 0-400. Let's shift them or map them.
-                    // Easier: Simulation space is centered at 0,0 with w,h?
-                    // Let's re-map initialization to -boxW/2 to boxW/2
-
-                    // Actually, let's keep simulation space simpler:
-                    // x range: [-boxW/2, boxW/2]
-                    // y range: [-boxH/2, boxH/2]
-
-                    // Need to re-init particles if switching coordinate systems?
-                    // Let's just handle coordinate shift in drawing.
-                    // Let's assume particles are in local space [-W_max/2, W_max/2]
-                    // And we clamp them to current volume bounds.
-
-                })
-
-                // Fix bounds and bounce
-                particlesRef.current.forEach(p => {
-                    // Current bounds
-                    const maxX = boxW / 2
-                    const maxY = boxH / 2
-
-                    // If we just shrank the volume, push particles in
-                    if (p.x > maxX) { p.x = maxX; p.vx = -Math.abs(p.vx); }
-                    else if (p.x < -maxX) { p.x = -maxX; p.vx = Math.abs(p.vx); }
-
-                    if (p.y > maxY) { p.y = maxY; p.vy = -Math.abs(p.vy); }
-                    else if (p.y < -maxY) { p.y = -maxY; p.vy = Math.abs(p.vy); }
+                    p.x += p.vx; p.y += p.vy
+                    if (p.x > halfW) { p.x = halfW; p.vx = -Math.abs(p.vx); wallHitsRef.current++ }
+                    else if (p.x < -halfW) { p.x = -halfW; p.vx = Math.abs(p.vx); wallHitsRef.current++ }
+                    if (p.y > halfH) { p.y = halfH; p.vy = -Math.abs(p.vy); wallHitsRef.current++ }
+                    else if (p.y < -halfH) { p.y = -halfH; p.vy = Math.abs(p.vy); wallHitsRef.current++ }
+                    p.speed = Math.sqrt(p.vx * p.vx + p.vy * p.vy)
                 })
             }
 
-            // Draw
-            ctx.clearRect(0, 0, width, height)
+            ctx.clearRect(0, 0, w, h)
 
-            // Draw Box
-            ctx.strokeStyle = 'white'
+            // Box
+            ctx.save()
+            ctx.strokeStyle = 'rgba(160, 100, 255, 0.6)'
             ctx.lineWidth = 2
-            ctx.strokeRect(left, top, boxW, boxH)
+            ctx.shadowColor = PHYSICS_COLOR
+            ctx.shadowBlur = 12
+            ctx.strokeRect(cx - halfW, cy - halfH, boxW, boxH)
+            ctx.restore()
 
-            // Draw Volume Handles?
-            // Maybe just static box for now.
+            // Piston indicator
+            ctx.fillStyle = 'rgba(160, 100, 255, 0.3)'
+            ctx.fillRect(cx + halfW - 6, cy - halfH, 6, boxH)
 
-            // Draw Particles
+            // Particles
             particlesRef.current.forEach(p => {
-                ctx.fillStyle = p.color
+                const speedNorm = Math.min(1, p.speed / 8)
+                const r = Math.round(100 + speedNorm * 155)
+                const g = Math.round(100 - speedNorm * 60)
+                const b = Math.round(255 - speedNorm * 155)
+                ctx.fillStyle = `rgb(${r},${g},${b})`
                 ctx.beginPath()
-                // Map local coords to screen
-                ctx.arc(cx + p.x, cy + p.y, 4, 0, Math.PI * 2)
+                ctx.arc(cx + p.x, cy + p.y, 3, 0, Math.PI * 2)
                 ctx.fill()
             })
 
-            // Draw Piston (Side wall moving)
-            // Left is fixed? No, centered.
-            // Let's visually mark the walls.
+            // Maxwell-Boltzmann distribution graph
+            if (showDistribution) {
+                const gx = w * 0.65
+                const gy = h * 0.15
+                const gw = w * 0.3
+                const gh = h * 0.35
 
-            // Data Display
-            // P = nRT / V
-            // P = const * N * T / V
-            const idealP = (particleCount * temperature) / (volume * 10000) * 8.314 // arb scale
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.4)'
+                ctx.fillRect(gx, gy, gw, gh)
+                ctx.strokeStyle = 'rgba(255,255,255,0.15)'
+                ctx.lineWidth = 1
+                ctx.strokeRect(gx, gy, gw, gh)
 
-            ctx.fillStyle = 'rgba(255,255,255,0.1)'
-            ctx.fillRect(20, 20, 200, 100)
-            ctx.fillStyle = 'white'
-            ctx.font = '14px monospace'
-            ctx.textAlign = 'left'
-            ctx.fillText(`Pressure (P): ${idealP.toFixed(2)} atm`, 30, 40)
-            ctx.fillText(`Volume (V): ${volume.toFixed(2)} L`, 30, 60)
-            ctx.fillText(`Moles (n): ${particleCount}`, 30, 80)
-            ctx.fillText(`Temp (T): ${temperature} K`, 30, 100)
+                // Histogram of speeds
+                const bins = 20
+                const maxSpeed = 10
+                const counts = new Array(bins).fill(0)
+                particlesRef.current.forEach(p => {
+                    const bin = Math.min(bins - 1, Math.floor((p.speed / maxSpeed) * bins))
+                    counts[bin]++
+                })
+                const maxCount = Math.max(1, ...counts)
 
-            ctx.textAlign = 'right'
-            ctx.font = '12px monospace'
-            ctx.fillStyle = '#facc15'
-            ctx.fillText('PV = nRT', width - 30, 40)
+                const barW = gw / bins
+                counts.forEach((c, i) => {
+                    const barH = (c / maxCount) * (gh - 30)
+                    const x = gx + i * barW
+                    const gradient = ctx.createLinearGradient(x, gy + gh - barH, x, gy + gh)
+                    gradient.addColorStop(0, 'rgba(160, 100, 255, 0.8)')
+                    gradient.addColorStop(1, 'rgba(160, 100, 255, 0.2)')
+                    ctx.fillStyle = gradient
+                    ctx.fillRect(x + 1, gy + gh - barH - 15, barW - 2, barH)
+                })
+
+                // Theoretical MB curve
+                const kT = temperature / 300
+                ctx.beginPath()
+                ctx.strokeStyle = 'rgba(255, 200, 100, 0.8)'
+                ctx.lineWidth = 2
+                for (let i = 0; i < gw; i++) {
+                    const v = (i / gw) * maxSpeed
+                    const f = v * v * Math.exp(-v * v / (2 * kT * 2)) / (kT * kT)
+                    const normF = f * 2.5
+                    const y = gy + gh - 15 - normF * (gh - 30)
+                    if (i === 0) ctx.moveTo(gx + i, y)
+                    else ctx.lineTo(gx + i, y)
+                }
+                ctx.stroke()
+
+                ctx.fillStyle = 'rgba(255,255,255,0.5)'
+                ctx.font = '11px sans-serif'
+                ctx.textAlign = 'center'
+                ctx.fillText('Speed Distribution', gx + gw / 2, gy + 12)
+                ctx.fillText('speed', gx + gw / 2, gy + gh - 2)
+                ctx.fillStyle = 'rgba(255, 200, 100, 0.7)'
+                ctx.textAlign = 'left'
+                ctx.fillText('MB Theory', gx + 5, gy + 25)
+            }
 
             animId = requestAnimationFrame(animate)
         }
 
         animId = requestAnimationFrame(animate)
-        return () => {
-            canvas.removeEventListener('resize', resize)
-            cancelAnimationFrame(animId)
-        }
-    }, [isRunning, volume, temperature, particleCount, particlesRef]) // Re-bind on state change? 
+        return () => { window.removeEventListener('resize', resize); cancelAnimationFrame(animId) }
+    }, [isRunning, volume, temperature, showDistribution])
 
-    // Adjusting particle init to center logic
-    useEffect(() => {
-        // Correct initial positions to be centered 0,0
-        particlesRef.current.forEach(p => {
-            if (p.x > 200) p.x -= 200; // Hacky fix for init?
-            // Better to just re-init correctly
-        })
-        const particles: Particle[] = []
-        for (let i = 0; i < particleCount; i++) {
-            particles.push({
-                x: (Math.random() - 0.5) * 300 * volume,
-                y: (Math.random() - 0.5) * 200,
-                vx: (Math.random() - 0.5) * Math.sqrt(temperature) * 20,
-                vy: (Math.random() - 0.5) * Math.sqrt(temperature) * 20,
-                color: `hsl(${200 + Math.random() * 40}, 70%, 50%)`
-            })
-        }
-        particlesRef.current = particles
-    }, [particleCount])
-
+    const pressure = ((particleCount * temperature) / (volume * 10000) * 8.314)
+    const vrms = Math.sqrt(3 * 8.314 * temperature / 28).toFixed(1)
 
     return (
         <div className="min-h-screen flex flex-col bg-[#0d0a1a] text-white font-sans overflow-hidden">
-            <div className="absolute inset-0 pointer-events-none">
-                <PhysicsBackground />
-            </div>
-
-            {/* Navbar */}
+            <div className="absolute inset-0 pointer-events-none"><PhysicsBackground /></div>
             <div className="relative z-10 flex items-center justify-between px-6 py-4 border-b border-white/10 bg-[#0d0a1a]/80 backdrop-blur-md">
                 <div className="flex items-center gap-4">
                     <Link to="/physics" className="p-2 rounded-full hover:bg-white/10 transition-colors">
@@ -212,78 +233,91 @@ export default function IdealGas() {
                     </Link>
                     <div>
                         <h1 className="text-xl font-medium tracking-tight">Ideal Gas Law</h1>
-                        <p className="text-xs text-white/50">AP Physics 2: Thermodynamics</p>
+                        <p className="text-xs text-white/50">Thermodynamics</p>
                     </div>
+                    <APTag course="Physics 2" unit="Unit 2" color={PHYSICS_COLOR} />
                 </div>
+                <Button onClick={demo.open} variant="secondary">Demo Mode</Button>
             </div>
 
             <div className="flex-1 relative flex">
                 <div className="flex-1 relative">
                     <canvas ref={canvasRef} className="w-full h-full block" />
-                </div>
-
-                {/* Controls Sidebar */}
-                <div className="w-80 bg-[#0d0a1a]/90 border-l border-white/10 p-6 flex flex-col gap-6 overflow-y-auto no-scrollbar z-20">
-                    <div className="text-sm text-white/70 leading-relaxed">
-                        Ideal Gas Law Relationship.
-                        <br />
-                        Higher Temperature = Faster Particles.
-                        <br />
-                        Smaller Volume = More Collisions (Pressure).
+                    <div className="absolute top-4 left-4 space-y-2">
+                        <EquationDisplay
+                            departmentColor={PHYSICS_COLOR}
+                            title="Gas Laws"
+                            equations={[
+                                { label: 'Ideal Gas', expression: 'PV = nRT', description: 'Pressure, volume, moles, temperature' },
+                                { label: 'KE avg', expression: 'KE = (3/2)kT', description: 'Average kinetic energy per molecule' },
+                                { label: 'RMS speed', expression: 'v_rms = sqrt(3RT/M)', description: 'Root mean square molecular speed' },
+                            ]}
+                        />
                     </div>
-
-                    <div className="h-px bg-white/10 my-2" />
-
-                    <div className="flex gap-2">
-                        <button
-                            onClick={() => setIsRunning(!isRunning)}
-                            className={`flex-1 py-3 rounded-xl font-medium text-sm transition-all ${isRunning
-                                ? 'bg-yellow-500/20 text-yellow-400 hover:bg-yellow-500/30'
-                                : 'bg-green-500 text-white hover:bg-green-400'
-                                }`}
-                        >
-                            {isRunning ? 'Freeze' : 'Unfreeze'}
-                        </button>
-                    </div>
-
-                    <div className="space-y-6">
-                        <div>
-                            <div className="flex items-center justify-between mb-2">
-                                <label className="text-sm font-medium text-white/80">Temperature (T)</label>
-                                <span className="text-xs font-mono text-red-400">{temperature} K</span>
-                            </div>
-                            <input
-                                type="range" min="50" max="600" step="10" value={temperature}
-                                onChange={(e) => setTemperature(Number(e.target.value))}
-                                className="w-full h-1 bg-white/10 rounded-lg appearance-none cursor-pointer accent-red-500"
-                            />
-                        </div>
-
-                        <div>
-                            <div className="flex items-center justify-between mb-2">
-                                <label className="text-sm font-medium text-white/80">Volume (V)</label>
-                                <span className="text-xs font-mono text-blue-400">{volume.toFixed(1)}x</span>
-                            </div>
-                            <input
-                                type="range" min="0.5" max="1.5" step="0.1" value={volume}
-                                onChange={(e) => setVolume(Number(e.target.value))}
-                                className="w-full h-1 bg-white/10 rounded-lg appearance-none cursor-pointer accent-blue-500"
-                            />
-                        </div>
-
-                        <div>
-                            <div className="flex items-center justify-between mb-2">
-                                <label className="text-sm font-medium text-white/80">Particles (n)</label>
-                                <span className="text-xs font-mono text-green-400">{particleCount}</span>
-                            </div>
-                            <input
-                                type="range" min="10" max="200" step="10" value={particleCount}
-                                onChange={(e) => setParticleCount(Number(e.target.value))}
-                                className="w-full h-1 bg-white/10 rounded-lg appearance-none cursor-pointer accent-green-500"
-                            />
-                        </div>
+                    <div className="absolute top-4 right-4">
+                        <InfoPanel
+                            departmentColor={PHYSICS_COLOR}
+                            title="State Variables"
+                            items={[
+                                { label: 'Pressure', value: pressure.toFixed(2), unit: 'atm' },
+                                { label: 'Volume', value: volume.toFixed(2), unit: 'L' },
+                                { label: 'Temperature', value: temperature, unit: 'K' },
+                                { label: 'Particles', value: particleCount },
+                                { label: 'v_rms', value: vrms, unit: 'm/s' },
+                            ]}
+                        />
                     </div>
                 </div>
+
+                <div className="w-72 bg-[#0d0a1a]/90 border-l border-white/10 p-5 flex flex-col gap-4 overflow-y-auto no-scrollbar z-20">
+                    <ControlPanel>
+                        <div className="flex gap-2">
+                            <Button onClick={() => setIsRunning(!isRunning)} variant={isRunning ? 'secondary' : 'primary'}>
+                                {isRunning ? 'Pause' : 'Play'}
+                            </Button>
+                            <Button onClick={() => { particlesRef.current = initParticles(particleCount, temperature, volume) }} variant="secondary">
+                                Reset
+                            </Button>
+                        </div>
+                        <ButtonGroup
+                            label="Process"
+                            value={process}
+                            onChange={v => setProcess(v as ProcessType)}
+                            options={[
+                                { value: 'free', label: 'Free' },
+                                { value: 'isothermal', label: 'Isothermal' },
+                                { value: 'adiabatic', label: 'Adiabatic' },
+                                { value: 'isobaric', label: 'Isobaric' },
+                            ]}
+                            color={PHYSICS_COLOR}
+                        />
+                        <ControlGroup label="Temperature (K)">
+                            <Slider value={temperature} onChange={setTemperature} min={50} max={800} step={10} label={`${temperature} K`} />
+                        </ControlGroup>
+                        <ControlGroup label="Volume">
+                            <Slider value={volume} onChange={setVolume} min={0.4} max={1.6} step={0.05} label={`${volume.toFixed(2)}x`} />
+                        </ControlGroup>
+                        <ControlGroup label="Particles">
+                            <Slider value={particleCount} onChange={setParticleCount} min={10} max={200} step={5} label={`${particleCount}`} />
+                        </ControlGroup>
+                        <Button onClick={() => setShowDistribution(!showDistribution)} variant="secondary">
+                            {showDistribution ? 'Hide' : 'Show'} Distribution
+                        </Button>
+                    </ControlPanel>
+                </div>
+            </div>
+
+            <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-30">
+                <DemoMode
+                    steps={demoSteps}
+                    currentStep={demo.currentStep}
+                    isOpen={demo.isOpen}
+                    onClose={demo.close}
+                    onNext={demo.next}
+                    onPrev={demo.prev}
+                    onGoToStep={demo.goToStep}
+                    departmentColor={PHYSICS_COLOR}
+                />
             </div>
         </div>
     )

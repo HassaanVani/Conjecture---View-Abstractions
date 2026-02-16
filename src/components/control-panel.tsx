@@ -129,3 +129,111 @@ export function VisualizationContainer({ children, className }: VisualizationCon
         </motion.div>
     )
 }
+
+// New components for Phase 0
+
+interface ToggleProps {
+    value: boolean
+    onChange: (value: boolean) => void
+    label?: string
+    className?: string
+}
+
+export function Toggle({ value, onChange, label, className }: ToggleProps) {
+    return (
+        <div className={cn('flex items-center justify-between', className)}>
+            {label && <span className="text-sm text-white/60">{label}</span>}
+            <button
+                onClick={() => onChange(!value)}
+                className={cn(
+                    'relative w-11 h-6 rounded-full transition-colors duration-200',
+                    value ? 'bg-blue-500/60' : 'bg-white/10'
+                )}
+            >
+                <span
+                    className={cn(
+                        'absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white transition-transform duration-200',
+                        value ? 'translate-x-5' : 'translate-x-0'
+                    )}
+                />
+            </button>
+        </div>
+    )
+}
+
+interface SelectOption {
+    value: string
+    label: string
+}
+
+interface SelectProps {
+    value: string
+    onChange: (value: string) => void
+    options: SelectOption[]
+    label?: string
+    className?: string
+}
+
+export function Select({ value, onChange, options, label, className }: SelectProps) {
+    return (
+        <div className={cn('space-y-2', className)}>
+            {label && <span className="text-sm text-white/60 block">{label}</span>}
+            <select
+                value={value}
+                onChange={e => onChange(e.target.value)}
+                className="w-full bg-bg-elevated border border-white/10 rounded-lg px-3 py-2 text-sm text-white font-mono focus:outline-none focus:border-white/30 transition-colors appearance-none cursor-pointer"
+                style={{
+                    backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='rgba(255,255,255,0.4)' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E")`,
+                    backgroundRepeat: 'no-repeat',
+                    backgroundPosition: 'right 10px center',
+                }}
+            >
+                {options.map(opt => (
+                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                ))}
+            </select>
+        </div>
+    )
+}
+
+interface ButtonGroupOption {
+    value: string
+    label: string
+}
+
+interface ButtonGroupProps {
+    value: string
+    onChange: (value: string) => void
+    options: ButtonGroupOption[]
+    label?: string
+    className?: string
+    color?: string
+}
+
+export function ButtonGroup({ value, onChange, options, label, className, color }: ButtonGroupProps) {
+    return (
+        <div className={cn('space-y-2', className)}>
+            {label && <span className="text-sm text-white/60 block">{label}</span>}
+            <div className="flex rounded-lg overflow-hidden border border-white/10">
+                {options.map((opt) => (
+                    <button
+                        key={opt.value}
+                        onClick={() => onChange(opt.value)}
+                        className={cn(
+                            'flex-1 px-3 py-2 text-xs font-medium transition-all duration-200',
+                            value === opt.value
+                                ? 'text-white'
+                                : 'text-white/40 hover:text-white/70 hover:bg-white/5'
+                        )}
+                        style={value === opt.value ? {
+                            backgroundColor: color ? `${color}30` : 'rgba(255,255,255,0.15)',
+                            color: color || 'white',
+                        } : undefined}
+                    >
+                        {opt.label}
+                    </button>
+                ))}
+            </div>
+        </div>
+    )
+}

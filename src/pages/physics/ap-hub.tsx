@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import { useState } from 'react'
 import { PhysicsBackground } from '@/components/backgrounds'
 
-type Track = 'ap1' | 'ap2'
+type Track = 'ap1' | 'ap2' | 'mech-c' | 'em-c'
 
 interface Unit {
     number: number
@@ -236,10 +236,142 @@ const ap2Units: Unit[] = [
 
 ]
 
+const mechCUnits: Unit[] = [
+    {
+        number: 1,
+        title: 'Kinematics & Dynamics',
+        visualizations: [
+            {
+                id: 'drag',
+                title: 'Drag Simulation',
+                symbol: 'F_d',
+                description: 'Air resistance, terminal velocity, and Reynolds number',
+                to: '/physics/mechanics/drag',
+            },
+        ],
+    },
+    {
+        number: 2,
+        title: 'Oscillations',
+        visualizations: [
+            {
+                id: 'oscillator',
+                title: 'Oscillator',
+                symbol: 'ω₀',
+                description: 'Damped harmonic motion and phase space',
+                to: '/physics/mechanics/oscillator',
+            },
+            {
+                id: 'resonance',
+                title: 'Driven Resonance',
+                symbol: 'ω=ω₀',
+                description: 'Driven oscillation, resonance curves, and Q-factor',
+                to: '/physics/mechanics/resonance',
+            },
+        ],
+    },
+    {
+        number: 3,
+        title: 'Center of Mass & Gravitation',
+        visualizations: [
+            {
+                id: 'center-of-mass',
+                title: 'Center of Mass',
+                symbol: 'r_cm',
+                description: 'Multi-body systems, explosions, and collisions',
+                to: '/physics/mechanics/center-of-mass',
+            },
+            {
+                id: 'grav-field',
+                title: 'Gravitational Field',
+                symbol: '-GM/r²',
+                description: 'Field visualization and equipotential surfaces',
+                to: '/physics/circular/grav-field',
+            },
+        ],
+    },
+]
+
+const emCUnits: Unit[] = [
+    {
+        number: 1,
+        title: "Gauss's Law & Electric Fields",
+        visualizations: [
+            {
+                id: 'gauss',
+                title: "Gauss's Law",
+                symbol: 'Φ_E',
+                description: 'Gaussian surfaces and enclosed charge calculations',
+                to: '/physics/em/gauss',
+            },
+            {
+                id: 'capacitor',
+                title: 'Capacitors & Dielectrics',
+                symbol: 'C=εA/d',
+                description: 'Parallel plate capacitors, energy storage, dielectrics',
+                to: '/physics/em/capacitor',
+            },
+        ],
+    },
+    {
+        number: 2,
+        title: 'Magnetic Fields & Forces',
+        visualizations: [
+            {
+                id: 'biot-savart',
+                title: 'Biot-Savart Law',
+                symbol: 'dB',
+                description: 'Magnetic field from current elements and loops',
+                to: '/physics/em/biot-savart',
+            },
+            {
+                id: 'ampere',
+                title: "Ampere's Law",
+                symbol: '∮B·dl',
+                description: 'Solenoids, toroids, and enclosed current',
+                to: '/physics/em/ampere',
+            },
+        ],
+    },
+    {
+        number: 3,
+        title: 'Circuits',
+        visualizations: [
+            {
+                id: 'rlc',
+                title: 'RLC Circuit',
+                symbol: 'Z',
+                description: 'Impedance, resonance, and phasor diagrams',
+                to: '/physics/em/rlc',
+            },
+            {
+                id: 'rl-lc',
+                title: 'RL/LC Circuits',
+                symbol: 'τ=L/R',
+                description: 'Transient response and LC oscillations',
+                to: '/physics/circuits/rl-lc',
+            },
+        ],
+    },
+    {
+        number: 4,
+        title: 'Electromagnetic Waves',
+        visualizations: [
+            {
+                id: 'em-wave',
+                title: 'EM Wave Propagation',
+                symbol: 'E×B',
+                description: 'Electric and magnetic field wave coupling',
+                to: '/physics/em/em-wave',
+            },
+        ],
+    },
+]
+
 export default function PhysicsHub() {
     const [track, setTrack] = useState<Track>('ap1')
-    const units = track === 'ap1' ? ap1Units : ap2Units
-    const trackColor = track === 'ap1' ? 'rgb(100, 140, 255)' : 'rgb(160, 100, 255)'
+    const units = track === 'ap1' ? ap1Units : track === 'ap2' ? ap2Units : track === 'mech-c' ? mechCUnits : emCUnits
+    const trackColor = track === 'ap1' ? 'rgb(100, 140, 255)' : track === 'ap2' ? 'rgb(160, 100, 255)' : track === 'mech-c' ? 'rgb(100, 200, 180)' : 'rgb(255, 140, 100)'
 
     return (
         <div className="min-h-screen relative bg-[#0d0a1a]">
@@ -266,7 +398,7 @@ export default function PhysicsHub() {
                                 AP Physics
                             </h1>
                             <p className="text-white/50 text-lg">
-                                Interactive visualizations for AP Physics 1 & 2
+                                Interactive visualizations for AP Physics 1, 2, C:Mech & C:E&M
                             </p>
                         </div>
                     </div>
@@ -279,40 +411,76 @@ export default function PhysicsHub() {
                     transition={{ duration: 0.6, delay: 0.2 }}
                     className="mb-10"
                 >
-                    <div className="flex gap-4">
+                    <div className="flex flex-wrap gap-3">
                         <button
                             onClick={() => setTrack('ap1')}
                             className={`
-                                relative px-6 py-3 rounded-xl text-lg font-medium transition-all duration-300
-                                flex items-center gap-3 border
+                                relative px-5 py-2.5 rounded-xl text-base font-medium transition-all duration-300
+                                flex items-center gap-2.5 border
                                 ${track === 'ap1'
                                     ? 'bg-blue-500/10 border-blue-500/30 text-blue-400'
                                     : 'bg-white/[0.02] border-white/[0.08] text-white/50 hover:bg-white/[0.05] hover:text-white/70'
                                 }
                             `}
                         >
-                            <span className="text-2xl">🍎</span>
+                            <span className="text-xl">🍎</span>
                             <div className="text-left">
-                                <div className="font-semibold">AP Physics 1</div>
-                                <div className="text-xs opacity-60">Mechanics</div>
+                                <div className="font-semibold text-sm">AP Physics 1</div>
+                                <div className="text-[10px] opacity-60">Mechanics</div>
                             </div>
                         </button>
 
                         <button
                             onClick={() => setTrack('ap2')}
                             className={`
-                                relative px-6 py-3 rounded-xl text-lg font-medium transition-all duration-300
-                                flex items-center gap-3 border
+                                relative px-5 py-2.5 rounded-xl text-base font-medium transition-all duration-300
+                                flex items-center gap-2.5 border
                                 ${track === 'ap2'
                                     ? 'bg-purple-500/10 border-purple-500/30 text-purple-400'
                                     : 'bg-white/[0.02] border-white/[0.08] text-white/50 hover:bg-white/[0.05] hover:text-white/70'
                                 }
                             `}
                         >
-                            <span className="text-2xl">⚡</span>
+                            <span className="text-xl">⚡</span>
                             <div className="text-left">
-                                <div className="font-semibold">AP Physics 2</div>
-                                <div className="text-xs opacity-60">E&M, Fluids, Optics</div>
+                                <div className="font-semibold text-sm">AP Physics 2</div>
+                                <div className="text-[10px] opacity-60">E&M, Fluids, Optics</div>
+                            </div>
+                        </button>
+
+                        <button
+                            onClick={() => setTrack('mech-c')}
+                            className={`
+                                relative px-5 py-2.5 rounded-xl text-base font-medium transition-all duration-300
+                                flex items-center gap-2.5 border
+                                ${track === 'mech-c'
+                                    ? 'bg-teal-500/10 border-teal-500/30 text-teal-400'
+                                    : 'bg-white/[0.02] border-white/[0.08] text-white/50 hover:bg-white/[0.05] hover:text-white/70'
+                                }
+                            `}
+                        >
+                            <span className="text-xl">⚙️</span>
+                            <div className="text-left">
+                                <div className="font-semibold text-sm">Physics C: Mech</div>
+                                <div className="text-[10px] opacity-60">Calculus-Based</div>
+                            </div>
+                        </button>
+
+                        <button
+                            onClick={() => setTrack('em-c')}
+                            className={`
+                                relative px-5 py-2.5 rounded-xl text-base font-medium transition-all duration-300
+                                flex items-center gap-2.5 border
+                                ${track === 'em-c'
+                                    ? 'bg-orange-500/10 border-orange-500/30 text-orange-400'
+                                    : 'bg-white/[0.02] border-white/[0.08] text-white/50 hover:bg-white/[0.05] hover:text-white/70'
+                                }
+                            `}
+                        >
+                            <span className="text-xl">🔌</span>
+                            <div className="text-left">
+                                <div className="font-semibold text-sm">Physics C: E&M</div>
+                                <div className="text-[10px] opacity-60">Calculus-Based</div>
                             </div>
                         </button>
                     </div>

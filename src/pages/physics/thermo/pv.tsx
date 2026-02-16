@@ -1,15 +1,108 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { Link } from 'react-router-dom'
 import { PhysicsBackground } from '@/components/backgrounds'
+import { ControlPanel, ControlGroup, Slider, Button, ButtonGroup } from '@/components/control-panel'
+import { EquationDisplay } from '@/components/equation-display'
+import { InfoPanel, APTag } from '@/components/info-panel'
+import { DemoMode, useDemoMode, type DemoStep } from '@/components/demo-mode'
+
+const PHYSICS_COLOR = 'rgb(160, 100, 255)'
+
+type CycleType = 'manual' | 'carnot' | 'otto'
+
+interface PVPoint { p: number; v: number }
 
 export default function PVDiagram() {
     const canvasRef = useRef<HTMLCanvasElement>(null)
-    const [pressure, setPressure] = useState(2.0) // atm
-    const [volume, setVolume] = useState(2.0) // L
-    // T is derived: T ~ PV
+    const [pressure, setPressure] = useState(2.0)
+    const [volume, setVolume] = useState(2.0)
+    const [cycle, setCycle] = useState<CycleType>('manual')
+    const [showWork, setShowWork] = useState(true)
+    const [isAnimating, setIsAnimating] = useState(false)
+    const historyRef = useRef<PVPoint[]>([{ p: 2.0, v: 2.0 }])
+    const animatingRef = useRef(false)
 
-    // Store path history to show cycle
-    const historyRef = useRef<{ p: number, v: number }[]>([])
+    const calcEntropy = (p: number, v: number): number => {
+        return 1.5 * Math.log(p) + 2.5 * Math.log(v)
+    }
+
+    const calcWork = useCallback((): number => {
+        const pts = historyRef.current
+        if (pts.length < 3) return 0
+        let area = 0
+        for (let i = 0; i < pts.length - 1; i++) {
+            area += (pts[i].p + pts[i + 1].p) / 2 * (pts[i + 1].v - pts[i].v)
+        }
+        return area * 101.3
+    }, [])
+
+    const animateTo = useCallback((targetP: number, targetV: number, duration: number, isIsothermal = false) => {
+        if (animatingRef.current) return
+        animatingRef.current = true
+        setIsAnimating(true)
+        const startP = pressure
+        const startV = volume
+        const startTime = performance.now()
+        const PV0 = startP * startV
+
+        const step = (now: number) => {
+            const t = Math.min(1, (now - startTime) / duration)
+            let nextP: number, nextV: number
+            if (isIsothermal) {
+                nextV = startV + (targetV - startV) * t
+                nextP = PV0 / nextV
+            } else {
+                nextP = startP + (targetP - startP) * t
+                nextV = startV + (targetV - startV) * t
+            }
+            setPressure(nextP)
+            setVolume(nextV)
+            historyRef.current.push({ p: nextP, v: nextV })
+            if (t < 1) requestAnimationFrame(step)
+            else { animatingRef.current = false; setIsAnimating(false) }
+        }
+        requestAnimationFrame(step)
+    }, [pressure, volume])
+
+    const runCarnot = useCallback(() => {
+        historyRef.current = [{ p: 3.5, v: 1.0 }]
+        setPressure(3.5); setVolume(1.0)
+        const steps = [
+            () => animateTo(1.75, 2.0, 800, true),
+            () => animateTo(1.0, 2.8, 800),
+            () => animateTo(2.0, 1.4, 800, true),
+            () => animateTo(3.5, 1.0, 800),
+        ]
+        let i = 0
+        const next = () => { if (i < steps.length) { steps[i](); i++; setTimeout(next, 900) } }
+        next()
+    }, [animateTo])
+
+    const runOtto = useCallback(() => {
+        historyRef.current = [{ p: 1.0, v: 4.0 }]
+        setPressure(1.0); setVolume(4.0)
+        const steps = [
+            () => animateTo(4.0, 1.5, 700),
+            () => animateTo(4.5, 1.5, 700),
+            () => animateTo(1.5, 4.0, 700),
+            () => animateTo(1.0, 4.0, 700),
+        ]
+        let i = 0
+        const next = () => { if (i < steps.length) { steps[i](); i++; setTimeout(next, 800) } }
+        next()
+    }, [animateTo])
+
+    const demoSteps: DemoStep[] = [
+        { title: 'PV Diagrams', description: 'A PV diagram shows the relationship between pressure and volume of a gas during thermodynamic processes.', highlight: 'The current state is shown as a yellow dot.' },
+        { title: 'Work = Area', description: 'Work done BY the gas equals the area under the curve on a PV diagram. Expansion = positive work.', setup: () => { setShowWork(true); historyRef.current = [{ p: 2, v: 1 }]; setPressure(2); setVolume(1); setTimeout(() => animateTo(2, 4, 1000), 200) }, highlight: 'The shaded area represents work done.' },
+        { title: 'Isobaric Process', description: 'Constant pressure. Horizontal line on PV diagram. W = P * deltaV.', setup: () => { historyRef.current = []; setPressure(3); setVolume(1); setTimeout(() => animateTo(3, 4, 1000), 200) } },
+        { title: 'Isochoric Process', description: 'Constant volume. Vertical line. No work done (W = 0) since volume does not change.', setup: () => { historyRef.current = []; setPressure(1); setVolume(2.5); setTimeout(() => animateTo(4, 2.5, 1000), 200) } },
+        { title: 'Carnot Cycle', description: 'The most efficient heat engine cycle: two isothermals + two adiabatics. Efficiency = 1 - Tc/Th.', setup: () => { setCycle('carnot'); setTimeout(runCarnot, 300) }, highlight: 'Watch the four-step Carnot cycle trace.' },
+        { title: 'Entropy', description: 'Entropy (S) measures disorder. For an ideal gas, deltaS = nCv*ln(T2/T1) + nR*ln(V2/V1).', highlight: 'Entropy value updates in the info panel as state changes.' },
+        { title: 'Heat Engine Efficiency', description: 'For any cycle, efficiency eta = W_net / Q_hot. The enclosed area is W_net.', setup: () => { setCycle('manual') }, highlight: 'Create closed cycles to see net work.' },
+    ]
+
+    const demo = useDemoMode(demoSteps)
 
     useEffect(() => {
         const canvas = canvasRef.current
@@ -17,215 +110,126 @@ export default function PVDiagram() {
         const ctx = canvas.getContext('2d')
         if (!ctx) return
 
+        let dpr = window.devicePixelRatio || 1
         const resize = () => {
-            canvas.width = canvas.offsetWidth * window.devicePixelRatio
-            canvas.height = canvas.offsetHeight * window.devicePixelRatio
-            ctx.scale(window.devicePixelRatio, window.devicePixelRatio)
+            dpr = window.devicePixelRatio || 1
+            canvas.width = canvas.offsetWidth * dpr
+            canvas.height = canvas.offsetHeight * dpr
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
         }
         resize()
         window.addEventListener('resize', resize)
 
         const animate = () => {
-            const width = canvas.offsetWidth
-            const height = canvas.offsetHeight
+            const w = canvas.offsetWidth
+            const h = canvas.offsetHeight
+            const gx = 80, gy = h - 60
+            const gw = w - 140, gh = h - 120
+            const scaleX = gw / 5, scaleY = gh / 5
 
-            // Graph bounds
-            const gx = 60
-            const gy = height - 60
-            const gw = width - 100
-            const gh = height - 100
+            ctx.clearRect(0, 0, w, h)
 
-            // Scales
-            // V goes 0 to 5
-            // P goes 0 to 5
-            const scaleX = gw / 5
-            const scaleY = gh / 5
-
-            ctx.clearRect(0, 0, width, height)
-
-            // Draw Axes
-            ctx.strokeStyle = 'white'
-            ctx.lineWidth = 2
+            // Axes
+            ctx.strokeStyle = 'rgba(255,255,255,0.4)'
+            ctx.lineWidth = 1.5
             ctx.beginPath()
-            ctx.moveTo(gx, gy - gh)
-            ctx.lineTo(gx, gy)
-            ctx.lineTo(gx + gw, gy)
+            ctx.moveTo(gx, gy - gh); ctx.lineTo(gx, gy); ctx.lineTo(gx + gw, gy)
             ctx.stroke()
 
-            // Labels
-            ctx.fillStyle = 'white'
-            ctx.font = '14px monospace'
+            ctx.fillStyle = 'rgba(255,255,255,0.5)'
+            ctx.font = '12px sans-serif'
             ctx.textAlign = 'center'
             ctx.fillText('Volume (L)', gx + gw / 2, gy + 40)
-
             ctx.save()
-            ctx.translate(20, gy - gh / 2)
-            ctx.rotate(-Math.PI / 2)
+            ctx.translate(20, gy - gh / 2); ctx.rotate(-Math.PI / 2)
             ctx.fillText('Pressure (atm)', 0, 0)
             ctx.restore()
 
-            // Grid
-            ctx.strokeStyle = 'rgba(255,255,255,0.1)'
+            // Grid + labels
+            ctx.strokeStyle = 'rgba(255,255,255,0.06)'
             ctx.lineWidth = 1
-            ctx.beginPath()
             for (let i = 1; i <= 5; i++) {
-                // Vertical lines (V)
-                const x = gx + i * scaleX
-                ctx.moveTo(x, gy)
-                ctx.lineTo(x, gy - gh)
-                ctx.fillText(i.toString(), x, gy + 20)
-
-                // Horizontal lines (P)
-                const y = gy - i * scaleY
-                ctx.moveTo(gx, y)
-                ctx.lineTo(gx + gw, y)
-                // P labels logic
-            }
-            ctx.stroke()
-
-            // P labels manual
-            for (let i = 1; i <= 5; i++) {
-                const y = gy - i * scaleY
-                ctx.fillText(i.toString(), 40, y + 5)
-            }
-
-            // Draw Isotherms (PV = const)
-            // T1 = 1, T2 = 4, etc.
-            ctx.strokeStyle = 'rgba(255, 100, 100, 0.3)'
-            ctx.setLineDash([5, 5])
-            const isotherms = [2, 4, 8, 12]
-            isotherms.forEach((k: number) => {
                 ctx.beginPath()
-                // P = k / V
-                for (let v_iso = 0.5; v_iso <= 5; v_iso += 0.1) {
-                    const p_iso = k / v_iso
-                    if (p_iso > 5) continue
-                    const x = gx + v_iso * scaleX
-                    const y = gy - p_iso * scaleY
-                    if (v_iso === 0.5 || p_iso > 5) ctx.moveTo(x, y) // Start
+                ctx.moveTo(gx + i * scaleX, gy); ctx.lineTo(gx + i * scaleX, gy - gh); ctx.stroke()
+                ctx.moveTo(gx, gy - i * scaleY); ctx.lineTo(gx + gw, gy - i * scaleY); ctx.stroke()
+                ctx.fillStyle = 'rgba(255,255,255,0.3)'
+                ctx.textAlign = 'center'
+                ctx.fillText(`${i}`, gx + i * scaleX, gy + 18)
+                ctx.textAlign = 'right'
+                ctx.fillText(`${i}`, gx - 8, gy - i * scaleY + 4)
+            }
+
+            // Isotherms
+            ctx.strokeStyle = 'rgba(160, 100, 255, 0.15)'
+            ctx.lineWidth = 1
+            ctx.setLineDash([4, 4]);
+            [2, 4, 8, 12].forEach(k => {
+                ctx.beginPath()
+                for (let v = 0.5; v <= 5; v += 0.1) {
+                    const p = k / v
+                    if (p > 5) continue
+                    const x = gx + v * scaleX, y = gy - p * scaleY
+                    if (v <= 0.6 || p > 5) ctx.moveTo(x, y)
                     else ctx.lineTo(x, y)
                 }
                 ctx.stroke()
             })
             ctx.setLineDash([])
 
-            // Draw Current Path/History
-            ctx.strokeStyle = '#60a5fa' // Blue
-            ctx.lineWidth = 3
+            // Shaded work area
+            if (showWork && historyRef.current.length > 2) {
+                ctx.beginPath()
+                const pts = historyRef.current
+                ctx.moveTo(gx + pts[0].v * scaleX, gy)
+                pts.forEach(pt => {
+                    ctx.lineTo(gx + pt.v * scaleX, gy - pt.p * scaleY)
+                })
+                ctx.lineTo(gx + pts[pts.length - 1].v * scaleX, gy)
+                ctx.closePath()
+                ctx.fillStyle = 'rgba(160, 100, 255, 0.15)'
+                ctx.fill()
+            }
+
+            // Path
             if (historyRef.current.length > 1) {
                 ctx.beginPath()
+                ctx.strokeStyle = 'rgba(160, 100, 255, 0.8)'
+                ctx.lineWidth = 2.5
                 historyRef.current.forEach((pt, i) => {
-                    const x = gx + pt.v * scaleX
-                    const y = gy - pt.p * scaleY
-                    if (i === 0) ctx.moveTo(x, y)
-                    else ctx.lineTo(x, y)
+                    const x = gx + pt.v * scaleX, y = gy - pt.p * scaleY
+                    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y)
                 })
                 ctx.stroke()
             }
 
-            // Draw Current Point
-            const cx = gx + volume * scaleX
-            const cy_pt = gy - pressure * scaleY
+            // Current point
+            const cpx = gx + volume * scaleX, cpy = gy - pressure * scaleY
+            ctx.fillStyle = '#facc15'
+            ctx.shadowColor = '#facc15'; ctx.shadowBlur = 12
+            ctx.beginPath(); ctx.arc(cpx, cpy, 6, 0, Math.PI * 2); ctx.fill()
+            ctx.shadowBlur = 0
 
-            ctx.fillStyle = '#facc15' // Yellow
-            ctx.beginPath()
-            ctx.arc(cx, cy_pt, 6, 0, Math.PI * 2)
-            ctx.fill()
-
-            // Draw Area Under Curve (Work)
-            // Ideally we shade polygon formed by history.
-            // Simplified: just show current point stats lines
-            ctx.strokeStyle = 'rgba(250, 204, 21, 0.5)'
-            ctx.setLineDash([2, 4])
-            ctx.beginPath()
-            ctx.moveTo(cx, cy_pt)
-            ctx.lineTo(cx, gy) // Down to V axis
-            ctx.stroke()
-
-            ctx.beginPath()
-            ctx.moveTo(cx, cy_pt)
-            ctx.lineTo(gx, cy_pt) // Left to P axis
-            ctx.stroke()
+            // Dashed reference lines
+            ctx.strokeStyle = 'rgba(250, 204, 21, 0.3)'
+            ctx.setLineDash([3, 5])
+            ctx.beginPath(); ctx.moveTo(cpx, cpy); ctx.lineTo(cpx, gy); ctx.stroke()
+            ctx.beginPath(); ctx.moveTo(cpx, cpy); ctx.lineTo(gx, cpy); ctx.stroke()
             ctx.setLineDash([])
-
-            // Calc Stats
-            // W = area. Need closed cycle or integral.
-            // U = 3/2 nRT = 3/2 PV (Monatomic ideal gas)
-            const U = 1.5 * pressure * volume * 101.3 // Joules roughly (atm*L -> J factor approx 101.3)
-            const T_proxy = pressure * volume // proportional to T
-
-            ctx.textAlign = 'right'
-            ctx.fillStyle = 'white'
-            ctx.font = '14px monospace'
-            ctx.fillText(`Internal Energy (U) ≈ ${U.toFixed(0)} J`, width - 20, 40)
-            ctx.fillText(`PV Factor (∝ T): ${T_proxy.toFixed(2)}`, width - 20, 60)
 
             requestAnimationFrame(animate)
         }
 
         requestAnimationFrame(animate)
-        return () => {
-            canvas.removeEventListener('resize', resize)
-        }
-    }, [pressure, volume])
+        return () => { window.removeEventListener('resize', resize) }
+    }, [pressure, volume, showWork])
 
-    // Add point to history when state changes (if desired)
-    // Or we manually add points via specific process buttons?
-    // Let's rely on buttons to "animate" a process, pushing points.
-
-    const animateTo = (targetP: number, targetV: number, duration: number) => {
-        // Interpolate
-        const startP = pressure
-        const startV = volume
-        const startTime = performance.now()
-
-        const step = (now: number) => {
-            const elapsed = now - startTime
-            const t = Math.min(1, elapsed / duration)
-            // Linear interp?
-            // Depends on process.
-            // Isobaric: P const, V linear.
-            // Isochoric: V const, P linear.
-            // Isothermal: PV = const.
-
-            let nextP = startP
-            let nextV = startV
-
-            // Smart interpolation based on process type?
-            // For now, simple linear interp of both (works for Straight lines).
-            // Isotherms require specific path.
-
-            nextP = startP + (targetP - startP) * t
-            nextV = startV + (targetV - startV) * t
-
-            setPressure(nextP)
-            setVolume(nextV)
-
-            historyRef.current.push({ p: nextP, v: nextV })
-
-            if (t < 1) requestAnimationFrame(step)
-        }
-        requestAnimationFrame(step)
-    }
-
-    // Processes
-    const isoBaricExp = () => animateTo(pressure, Math.min(5, volume + 1), 500)
-    const isoBaricComp = () => animateTo(pressure, Math.max(0.5, volume - 1), 500)
-    const isoChoricHeat = () => animateTo(Math.min(5, pressure + 1), volume, 500)
-    const isoChoricCool = () => animateTo(Math.max(0.5, pressure - 1), volume, 500)
-
-    const clear = () => {
-        historyRef.current = []
-        // Don't reset P,V necessarily?
-    }
+    const U = 1.5 * pressure * volume * 101.3
+    const work = calcWork()
+    const entropy = calcEntropy(pressure, volume)
 
     return (
         <div className="min-h-screen flex flex-col bg-[#0d0a1a] text-white font-sans overflow-hidden">
-            <div className="absolute inset-0 pointer-events-none">
-                <PhysicsBackground />
-            </div>
-
-            {/* Navbar */}
+            <div className="absolute inset-0 pointer-events-none"><PhysicsBackground /></div>
             <div className="relative z-10 flex items-center justify-between px-6 py-4 border-b border-white/10 bg-[#0d0a1a]/80 backdrop-blur-md">
                 <div className="flex items-center gap-4">
                     <Link to="/physics" className="p-2 rounded-full hover:bg-white/10 transition-colors">
@@ -235,84 +239,95 @@ export default function PVDiagram() {
                     </Link>
                     <div>
                         <h1 className="text-xl font-medium tracking-tight">PV Diagrams</h1>
-                        <p className="text-xs text-white/50">AP Physics 2: Thermodynamics</p>
+                        <p className="text-xs text-white/50">Thermodynamics</p>
                     </div>
+                    <APTag course="Physics 2" unit="Unit 2" color={PHYSICS_COLOR} />
                 </div>
+                <Button onClick={demo.open} variant="secondary">Demo Mode</Button>
             </div>
 
             <div className="flex-1 relative flex">
                 <div className="flex-1 relative">
                     <canvas ref={canvasRef} className="w-full h-full block" />
-                </div>
-
-                {/* Controls Sidebar */}
-                <div className="w-80 bg-[#0d0a1a]/90 border-l border-white/10 p-6 flex flex-col gap-6 overflow-y-auto no-scrollbar z-20">
-                    <div className="text-sm text-white/70 leading-relaxed">
-                        Manipulate the state of the gas.
-                        <br />
-                        Work = Area under the curve.
-                        <br />
-                        Isotherms (dashed) show T = const.
-                    </div>
-
-                    <div className="h-px bg-white/10 my-2" />
-
-                    <div className="space-y-4">
-                        <label className="text-sm font-medium text-white/80 block">Isobaric (Const P)</label>
-                        <div className="flex gap-2">
-                            <button onClick={isoBaricExp} className="flex-1 py-2 bg-blue-500/20 text-blue-400 rounded-lg text-sm hover:bg-blue-500/30">Expand (+V)</button>
-                            <button onClick={isoBaricComp} className="flex-1 py-2 bg-blue-500/20 text-blue-400 rounded-lg text-sm hover:bg-blue-500/30">Compress (-V)</button>
-                        </div>
-
-                        <label className="text-sm font-medium text-white/80 block">Isochoric (Const V)</label>
-                        <div className="flex gap-2">
-                            <button onClick={isoChoricHeat} className="flex-1 py-2 bg-red-500/20 text-red-400 rounded-lg text-sm hover:bg-red-500/30">Heat (+P)</button>
-                            <button onClick={isoChoricCool} className="flex-1 py-2 bg-red-500/20 text-red-400 rounded-lg text-sm hover:bg-red-500/30">Cool (-P)</button>
-                        </div>
-                    </div>
-
-                    <div className="h-px bg-white/10 my-2" />
-
-                    <div>
-                        <div className="flex items-center justify-between mb-2">
-                            <label className="text-sm font-medium text-white/80">Pressure</label>
-                            <span className="text-xs font-mono text-white/60">{pressure.toFixed(2)} atm</span>
-                        </div>
-                        <input
-                            type="range" min="0.5" max="5.0" step="0.1" value={pressure}
-                            onChange={(e) => {
-                                const val = Number(e.target.value)
-                                setPressure(val)
-                                historyRef.current.push({ p: val, v: volume })
-                            }}
-                            className="w-full h-1 bg-white/10 rounded-lg appearance-none cursor-pointer accent-white"
+                    <div className="absolute top-4 left-4 space-y-2">
+                        <EquationDisplay
+                            departmentColor={PHYSICS_COLOR}
+                            title="Thermodynamics"
+                            equations={[
+                                { label: '1st Law', expression: 'deltaU = Q - W', description: 'Energy conservation' },
+                                { label: 'Work', expression: 'W = integral P dV', description: 'Area under PV curve' },
+                                { label: 'Entropy', expression: 'deltaS = Q_rev / T', description: 'Disorder measure' },
+                            ]}
                         />
                     </div>
-
-                    <div>
-                        <div className="flex items-center justify-between mb-2">
-                            <label className="text-sm font-medium text-white/80">Volume</label>
-                            <span className="text-xs font-mono text-white/60">{volume.toFixed(2)} L</span>
-                        </div>
-                        <input
-                            type="range" min="0.5" max="5.0" step="0.1" value={volume}
-                            onChange={(e) => {
-                                const val = Number(e.target.value)
-                                setVolume(val)
-                                historyRef.current.push({ p: pressure, v: val })
-                            }}
-                            className="w-full h-1 bg-white/10 rounded-lg appearance-none cursor-pointer accent-white"
+                    <div className="absolute top-4 right-4">
+                        <InfoPanel
+                            departmentColor={PHYSICS_COLOR}
+                            title="Thermodynamic State"
+                            items={[
+                                { label: 'Pressure', value: pressure.toFixed(2), unit: 'atm' },
+                                { label: 'Volume', value: volume.toFixed(2), unit: 'L' },
+                                { label: 'Internal Energy', value: U.toFixed(0), unit: 'J' },
+                                { label: 'Work (path)', value: work.toFixed(1), unit: 'J' },
+                                { label: 'Entropy (S)', value: entropy.toFixed(2) },
+                                { label: 'PV ~ T', value: (pressure * volume).toFixed(2) },
+                            ]}
                         />
                     </div>
-
-                    <button
-                        onClick={clear}
-                        className="w-full py-3 mt-4 rounded-xl font-medium text-sm bg-white/5 text-white/60 hover:bg-white/10 hover:text-white transition-all"
-                    >
-                        Clear Path
-                    </button>
-
                 </div>
+
+                <div className="w-72 bg-[#0d0a1a]/90 border-l border-white/10 p-5 flex flex-col gap-4 overflow-y-auto no-scrollbar z-20">
+                    <ControlPanel>
+                        <ButtonGroup
+                            label="Cycle Mode"
+                            value={cycle}
+                            onChange={v => setCycle(v as CycleType)}
+                            options={[
+                                { value: 'manual', label: 'Manual' },
+                                { value: 'carnot', label: 'Carnot' },
+                                { value: 'otto', label: 'Otto' },
+                            ]}
+                            color={PHYSICS_COLOR}
+                        />
+                        {cycle !== 'manual' && (
+                            <Button onClick={cycle === 'carnot' ? runCarnot : runOtto} disabled={isAnimating}>
+                                Run {cycle === 'carnot' ? 'Carnot' : 'Otto'} Cycle
+                            </Button>
+                        )}
+                        <ControlGroup label="Isobaric (const P)">
+                            <div className="flex gap-2">
+                                <Button onClick={() => animateTo(pressure, Math.min(5, volume + 1), 500)} variant="secondary" disabled={isAnimating}>+V</Button>
+                                <Button onClick={() => animateTo(pressure, Math.max(0.5, volume - 1), 500)} variant="secondary" disabled={isAnimating}>-V</Button>
+                            </div>
+                        </ControlGroup>
+                        <ControlGroup label="Isochoric (const V)">
+                            <div className="flex gap-2">
+                                <Button onClick={() => animateTo(Math.min(5, pressure + 1), volume, 500)} variant="secondary" disabled={isAnimating}>+P</Button>
+                                <Button onClick={() => animateTo(Math.max(0.5, pressure - 1), volume, 500)} variant="secondary" disabled={isAnimating}>-P</Button>
+                            </div>
+                        </ControlGroup>
+                        <ControlGroup label="Isothermal (const T)">
+                            <div className="flex gap-2">
+                                <Button onClick={() => animateTo(0, Math.min(5, volume + 1), 500, true)} variant="secondary" disabled={isAnimating}>+V</Button>
+                                <Button onClick={() => animateTo(0, Math.max(0.5, volume - 1), 500, true)} variant="secondary" disabled={isAnimating}>-V</Button>
+                            </div>
+                        </ControlGroup>
+                        <ControlGroup label="Pressure">
+                            <Slider value={pressure} onChange={v => { setPressure(v); historyRef.current.push({ p: v, v: volume }) }} min={0.5} max={5} step={0.1} />
+                        </ControlGroup>
+                        <ControlGroup label="Volume">
+                            <Slider value={volume} onChange={v => { setVolume(v); historyRef.current.push({ p: pressure, v }) }} min={0.5} max={5} step={0.1} />
+                        </ControlGroup>
+                        <div className="flex gap-2">
+                            <Button onClick={() => { historyRef.current = [{ p: pressure, v: volume }] }} variant="secondary">Clear Path</Button>
+                            <Button onClick={() => setShowWork(!showWork)} variant="secondary">{showWork ? 'Hide' : 'Show'} W</Button>
+                        </div>
+                    </ControlPanel>
+                </div>
+            </div>
+
+            <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-30">
+                <DemoMode steps={demoSteps} currentStep={demo.currentStep} isOpen={demo.isOpen} onClose={demo.close} onNext={demo.next} onPrev={demo.prev} onGoToStep={demo.goToStep} departmentColor={PHYSICS_COLOR} />
             </div>
         </div>
     )

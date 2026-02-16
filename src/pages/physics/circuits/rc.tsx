@@ -1,30 +1,68 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { Link } from 'react-router-dom'
 import { PhysicsBackground } from '@/components/backgrounds'
+import { ControlPanel, ControlGroup, Slider, Button, ButtonGroup, Select } from '@/components/control-panel'
+import { EquationDisplay } from '@/components/equation-display'
+import { InfoPanel, APTag } from '@/components/info-panel'
+import { DemoMode, useDemoMode, type DemoStep } from '@/components/demo-mode'
+
+const PHYSICS_COLOR = 'rgb(160, 100, 255)'
+
+type Mode = 'charge' | 'discharge'
+
+const PRESETS = [
+    { value: 'custom', label: 'Custom' },
+    { value: 'fast', label: 'Fast (10ohm, 100uF)' },
+    { value: 'medium', label: 'Medium (100ohm, 200uF)' },
+    { value: 'slow', label: 'Slow (500ohm, 500uF)' },
+]
 
 export default function RCCircuit() {
     const canvasRef = useRef<HTMLCanvasElement>(null)
-    const [isCharging, setIsCharging] = useState(false)
-    const [resistance, setResistance] = useState(100) // Ohms
-    const [capacitance, setCapacitance] = useState(100) // microFarads
-    const [sourceVoltage, setSourceVoltage] = useState(10) // Volts
-
-    // Simulation state
+    const [mode, setMode] = useState<Mode>('charge')
+    const [resistance, setResistance] = useState(100)
+    const [capacitance, setCapacitance] = useState(200)
+    const [sourceVoltage, setSourceVoltage] = useState(10)
+    const [preset, setPreset] = useState('custom')
+    const stateRef = useRef({ q: 0, v_c: 0, i: 0 })
     const timeRef = useRef(0)
-    const stateRef = useRef({ q: 0, v_c: 0, i: 0 }) // Charge, Voltage across C, Current
+    const historyRef = useRef<{ t: number; v: number; i: number; q: number }[]>([])
+    const lastTimeRef = useRef(performance.now())
 
-    // RC Time Constant
-    const tau = (resistance * capacitance) / 1000 // scale? 100 * 100 uF = 10000 uS = 10ms.
-    // Let's adjust scales for visibility.
-    // R: 10-1000 Ohms
-    // C: 10-1000 uF
-    // Time scale: seconds for viz.
+    const tau = (resistance * capacitance) / 1e5
 
-    const reset = () => {
+    const reset = useCallback(() => {
         timeRef.current = 0
-        stateRef.current = { q: 0, v_c: 0, i: 0 }
-        setIsCharging(false)
-    }
+        if (mode === 'charge') {
+            stateRef.current = { q: 0, v_c: 0, i: 0 }
+        } else {
+            const C = capacitance / 1e4
+            stateRef.current = { q: sourceVoltage * C, v_c: sourceVoltage, i: 0 }
+        }
+        historyRef.current = []
+        lastTimeRef.current = performance.now()
+    }, [mode, capacitance, sourceVoltage])
+
+    useEffect(() => { reset() }, [mode, reset])
+
+    useEffect(() => {
+        if (preset === 'fast') { setResistance(10); setCapacitance(100) }
+        else if (preset === 'medium') { setResistance(100); setCapacitance(200) }
+        else if (preset === 'slow') { setResistance(500); setCapacitance(500) }
+    }, [preset])
+
+    const demoSteps: DemoStep[] = [
+        { title: 'RC Circuits', description: 'A resistor-capacitor circuit stores and releases electrical energy through exponential charge/discharge curves.', highlight: 'The circuit diagram shows R and C connected to a voltage source.' },
+        { title: 'Time Constant (tau)', description: 'tau = RC determines how fast the circuit responds. After 1 tau, voltage reaches 63% of final value.', setup: () => { setResistance(100); setCapacitance(200); setMode('charge'); reset() }, highlight: 'Watch the tau marker on the graph.' },
+        { title: 'Charging', description: 'V_c(t) = V_s(1 - e^(-t/RC)). Voltage rises exponentially toward source voltage. Current decreases.', setup: () => { setMode('charge'); reset() } },
+        { title: 'Discharging', description: 'V_c(t) = V_0 * e^(-t/RC). Voltage decays exponentially to zero. Current flows in reverse.', setup: () => { setMode('discharge'); reset() }, highlight: 'Switch to discharge to see exponential decay.' },
+        { title: 'Current vs Time', description: 'During charging: I = (V_s/R)e^(-t/RC). Current starts high and decays. Yellow curve shows current alongside voltage.', setup: () => { setMode('charge'); reset() }, highlight: 'Blue = voltage, Yellow = current.' },
+        { title: 'Effect of R', description: 'Larger R means slower charging (larger tau). The current is also smaller at any given time.', setup: () => { setResistance(500); setMode('charge'); reset() } },
+        { title: 'Effect of C', description: 'Larger C stores more charge (Q = CV). Takes longer to charge but holds more energy (U = 0.5CV^2).', setup: () => { setCapacitance(500); setMode('charge'); reset() } },
+        { title: 'Presets', description: 'Use presets to quickly compare fast, medium, and slow RC circuits. Notice how tau changes the curve shape.', setup: () => { setPreset('fast') } },
+    ]
+
+    const demo = useDemoMode(demoSteps)
 
     useEffect(() => {
         const canvas = canvasRef.current
@@ -32,230 +70,194 @@ export default function RCCircuit() {
         const ctx = canvas.getContext('2d')
         if (!ctx) return
 
+        let dpr = window.devicePixelRatio || 1
         const resize = () => {
-            canvas.width = canvas.offsetWidth * window.devicePixelRatio
-            canvas.height = canvas.offsetHeight * window.devicePixelRatio
-            ctx.scale(window.devicePixelRatio, window.devicePixelRatio)
+            dpr = window.devicePixelRatio || 1
+            canvas.width = canvas.offsetWidth * dpr
+            canvas.height = canvas.offsetHeight * dpr
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
         }
         resize()
         window.addEventListener('resize', resize)
 
-        // Data history for graph
-        const history: { t: number, v: number, i: number }[] = []
-        let lastTime = performance.now()
-
         const animate = () => {
             const now = performance.now()
-            const dt = Math.min((now - lastTime) / 1000, 0.05) // seconds
-            lastTime = now
+            const dt = Math.min((now - lastTimeRef.current) / 1000, 0.05)
+            lastTimeRef.current = now
 
-            const width = canvas.offsetWidth
-            const height = canvas.offsetHeight
+            const w = canvas.offsetWidth, h = canvas.offsetHeight
 
-            // Physics Update
-            // V_s = I*R + Q/C
-            // I = dQ/dt
-            // Charging: V_c(t) = V_s(1 - e^(-t/RC))
-            // Discharging: V_c(t) = V_0 * e^(-t/RC)
-            // Ideally simulate step-wise
-
+            // Physics
             const R = resistance
-            const C = capacitance / 10000 // Arb scale factor to make it slower
-            const Vs = isCharging ? sourceVoltage : 0
-
-            // Numerical integration for smooth transitions
-            // I = (Vs - V_c) / R
-            // dQ = I * dt
-            // V_c = Q / C
-
-            const currentV_c = stateRef.current.v_c
-            const I = (Vs - currentV_c) / R
-
-            // Check direction
-            // If discharging and V_c ~ 0, stop?
-            // Exponential never reaches 0, but effectively.
-
+            const C = capacitance / 1e4
+            const Vs = mode === 'charge' ? sourceVoltage : 0
+            const I = (Vs - stateRef.current.v_c) / R
             stateRef.current.q += I * dt
             stateRef.current.v_c = stateRef.current.q / C
             stateRef.current.i = I
-
             timeRef.current += dt
 
-            // Record history (keep last 5-10s)
-            history.push({
-                t: timeRef.current,
-                v: stateRef.current.v_c,
-                i: stateRef.current.i
-            })
-            if (history.length > 300) history.shift() // Prune
+            historyRef.current.push({ t: timeRef.current, v: stateRef.current.v_c, i: I, q: stateRef.current.q })
+            if (historyRef.current.length > 500) historyRef.current.shift()
 
-            // Drawing
-            ctx.clearRect(0, 0, width, height)
+            ctx.clearRect(0, 0, w, h)
 
-            const cx = width / 2
-            const cy = height / 3
+            // Circuit diagram (top area)
+            const cx = w * 0.35, cy = h * 0.28
+            const cw = 240, ch = 120
+            const left = cx - cw / 2, right = cx + cw / 2
+            const top = cy - ch / 2, bot = cy + ch / 2
 
-            // Draw Circuit Diagram (Schematic)
-            ctx.strokeStyle = 'white'
-            ctx.lineWidth = 3
+            ctx.strokeStyle = 'rgba(255,255,255,0.6)'
+            ctx.lineWidth = 2.5
             ctx.lineJoin = 'round'
 
-            const circW = 300
-            const circH = 150
-            const left = cx - circW / 2
-            const right = cx + circW / 2
-            const top = cy - circH / 2
-            const bottom = cy + circH / 2
-
+            // Top wire + resistor
             ctx.beginPath()
-            // Top (Switch + Resistor)
-            ctx.moveTo(left, top)
-            // Resistor jagged line
-            // ... simplified block for now
-            ctx.lineTo(cx - 50, top) // To R
-            // Resistor Icon
-            ctx.lineTo(cx - 40, top - 10)
-            ctx.lineTo(cx - 30, top + 10)
-            ctx.lineTo(cx - 20, top - 10)
-            ctx.lineTo(cx - 10, top + 10)
-            ctx.lineTo(cx, top)      // End R
-
-            ctx.lineTo(right, top)
-
-            // Right (Wire)
-            ctx.lineTo(right, bottom)
-
-            // Bottom (Capacitor)
-            ctx.lineTo(cx + 20, bottom)
-            // Capacitor Plates
-            ctx.moveTo(cx + 20, bottom - 15)
-            ctx.lineTo(cx + 20, bottom + 15)
-            ctx.moveTo(cx - 20, bottom - 15)
-            ctx.lineTo(cx - 20, bottom + 15)
-
-            ctx.moveTo(cx - 20, bottom)
-            ctx.lineTo(left, bottom)
-
-            // Left (Source / Battery)
-            ctx.lineTo(left, cy + 20)
-            // Battery symbol
-            ctx.moveTo(left - 15, cy + 20); ctx.lineTo(left + 15, cy + 20) // Long
-            ctx.moveTo(left - 8, cy + 40); ctx.lineTo(left + 8, cy + 40)   // Short
-            ctx.moveTo(left, cy + 40)
-            ctx.lineTo(left, top)
-
-            // Switch Visual
-            // Ideally switch determines connection to Source (Charging) or disconnect/short (Discharging)
-            // Schematic correction: Typically "Charging" connects Vs. "Discharging" connects R to C directly (bypass source).
-            // Let's visualize a switch flipping.
-            // Switch at Top Left.
-            // if charging: Closed to source.
-            // if discharging: Connected to loop without source?
-            // Simplified: Draw battery active or not?
-            // "Discharging" usually means C acts as source through R.
-            // Standard RC circuit: Battery -> Switch -> R -> C (-).
-            // If Switch open, nothing happens (hold charge).
-            // If switch connects C to ground (short), it discharges.
-
-            // Let's visualize switch state:
-            // Point A (Source), Point B (Circuit), Point C (Ground/Short)
-
+            ctx.moveTo(left, top); ctx.lineTo(cx - 40, top)
+            const rPts = [-30, -20, -10, 0, 10, 20, 30]
+            rPts.forEach((dx, i) => {
+                ctx.lineTo(cx + dx, top + (i % 2 === 0 ? -8 : 8))
+            })
+            ctx.lineTo(cx + 40, top); ctx.lineTo(right, top)
+            ctx.lineTo(right, bot)
             ctx.stroke()
 
-            ctx.fillStyle = 'white'
-            ctx.font = '14px monospace'
-            ctx.fillText(`R = ${resistance}Ω`, cx - 25, top - 20)
-            ctx.fillText(`C = ${capacitance}μF`, cx, bottom + 35)
-            ctx.textAlign = 'left'
-            ctx.fillText(`${isCharging ? 'Charging' : 'Discharging'}`, left + 20, top + 20)
+            // Capacitor
+            ctx.beginPath()
+            ctx.moveTo(right, bot); ctx.lineTo(cx + 15, bot)
+            ctx.stroke()
+            ctx.beginPath()
+            ctx.moveTo(cx + 15, bot - 18); ctx.lineTo(cx + 15, bot + 18)
+            ctx.moveTo(cx - 15, bot - 18); ctx.lineTo(cx - 15, bot + 18)
+            ctx.stroke()
+            ctx.beginPath()
+            ctx.moveTo(cx - 15, bot); ctx.lineTo(left, bot)
+            ctx.stroke()
 
-            // Draw Electrons / Current Flow
+            // Battery
+            ctx.beginPath()
+            ctx.moveTo(left, bot); ctx.lineTo(left, cy + 15)
+            ctx.stroke()
+            ctx.beginPath()
+            ctx.moveTo(left - 12, cy + 15); ctx.lineTo(left + 12, cy + 15)
+            ctx.moveTo(left - 6, cy + 25); ctx.lineTo(left + 6, cy + 25)
+            ctx.stroke()
+            ctx.beginPath()
+            ctx.moveTo(left, cy + 25); ctx.lineTo(left, top)
+            ctx.stroke()
+
+            // Labels
+            ctx.fillStyle = 'rgba(255,255,255,0.6)'
+            ctx.font = '12px monospace'
+            ctx.textAlign = 'center'
+            ctx.fillText(`R = ${resistance} ohm`, cx, top - 18)
+            ctx.fillText(`C = ${capacitance} uF`, cx, bot + 32)
+            ctx.fillText(`${sourceVoltage}V`, left - 25, cy + 22)
+
+            // Current arrow
             if (Math.abs(I) > 0.001) {
-                // const speed = I * 50
-                // Simplified: Show arrow
-                ctx.fillStyle = isCharging ? '#4ade80' : '#ef4444' // Green charge, Red discharge
-                ctx.textAlign = 'right'
-                ctx.fillText(`I = ${(I * 1000).toFixed(1)} mA`, right + 10, cy)
+                const arrowColor = mode === 'charge' ? 'rgba(100, 255, 150, 0.8)' : 'rgba(255, 100, 100, 0.8)'
+                ctx.strokeStyle = arrowColor
+                ctx.fillStyle = arrowColor
+                ctx.lineWidth = 2
+                const arrowY = top
+                const arrowDir = I > 0 ? 1 : -1
+                ctx.beginPath()
+                ctx.moveTo(cx - 50 * arrowDir, arrowY - 20)
+                ctx.lineTo(cx + 20 * arrowDir, arrowY - 20)
+                ctx.stroke()
+                ctx.beginPath()
+                ctx.moveTo(cx + 20 * arrowDir, arrowY - 25)
+                ctx.lineTo(cx + 30 * arrowDir, arrowY - 20)
+                ctx.lineTo(cx + 20 * arrowDir, arrowY - 15)
+                ctx.fill()
+                ctx.font = '11px monospace'
+                ctx.fillText(`I = ${(Math.abs(I) * 1000).toFixed(1)} mA`, cx, arrowY - 30)
             }
 
-            // Draw Tau Info
-            ctx.fillStyle = 'white'
-            ctx.textAlign = 'left'
-            ctx.fillText(`τ (RC) = ${tau.toFixed(1)} s`, left, bottom + 60)
+            // Charge level on capacitor
+            const chargePercent = Math.abs(stateRef.current.v_c / sourceVoltage)
+            ctx.fillStyle = `rgba(160, 100, 255, ${chargePercent * 0.5})`
+            ctx.fillRect(cx - 14, bot - 17, 28, 34)
 
-            // Draw Graph (V_c vs Time)
-            const graphH = 150
-            const graphW = width - 100
-            const gx = 50
-            const gy = height - 50
+            // Graphs (bottom half)
+            const graphY = h * 0.55
+            const graphH = h * 0.35
+            const graphW = w * 0.75
+            const gx = 70
 
             // Axes
-            ctx.strokeStyle = 'rgba(255,255,255,0.3)'
+            ctx.strokeStyle = 'rgba(255,255,255,0.2)'
             ctx.lineWidth = 1
             ctx.beginPath()
-            ctx.moveTo(gx, gy)
-            ctx.lineTo(gx, gy - graphH)
-            ctx.moveTo(gx, gy)
-            ctx.lineTo(gx + graphW, gy)
+            ctx.moveTo(gx, graphY); ctx.lineTo(gx, graphY + graphH)
+            ctx.lineTo(gx + graphW, graphY + graphH)
             ctx.stroke()
 
-            // Plot
-            if (history.length > 1) {
-                const tMax = history[history.length - 1].t
-                const tMin = Math.max(0, tMax - 10) // Show last 10s window? Or scroll?
-                // Let's scroll.
+            ctx.fillStyle = 'rgba(255,255,255,0.4)'
+            ctx.font = '11px sans-serif'
+            ctx.textAlign = 'center'
+            ctx.fillText('Time (s)', gx + graphW / 2, graphY + graphH + 18)
 
+            // Tau marker
+            if (historyRef.current.length > 0) {
+                const tMin = historyRef.current[0].t
+                const tMax = Math.max(tMin + tau * 6, historyRef.current[historyRef.current.length - 1].t)
+                const tauX = gx + ((tau - tMin) / (tMax - tMin)) * graphW
+
+                if (tauX > gx && tauX < gx + graphW) {
+                    ctx.strokeStyle = 'rgba(160, 100, 255, 0.4)'
+                    ctx.setLineDash([4, 4])
+                    ctx.beginPath(); ctx.moveTo(tauX, graphY); ctx.lineTo(tauX, graphY + graphH); ctx.stroke()
+                    ctx.setLineDash([])
+                    ctx.fillStyle = PHYSICS_COLOR
+                    ctx.font = '10px monospace'
+                    ctx.fillText('tau', tauX, graphY - 5)
+                }
+
+                // Voltage curve (blue)
                 ctx.beginPath()
-                ctx.strokeStyle = '#60a5fa' // Blue voltage
+                ctx.strokeStyle = '#60a5fa'
                 ctx.lineWidth = 2
-
-                history.forEach((pt, i) => {
-                    const x = gx + ((pt.t - tMin) / 10) * graphW // Scale t to window
-                    const y = gy - (pt.v / 12) * graphH // Scale V (max 12V? 10V src)
-
-                    if (x < gx) return // Out of window
-
-                    if (i === 0 || history[i - 1].t < tMin) ctx.moveTo(x, y)
-                    else ctx.lineTo(x, y)
+                historyRef.current.forEach((pt, i) => {
+                    const x = gx + ((pt.t - tMin) / (tMax - tMin)) * graphW
+                    const y = graphY + graphH - (pt.v / (sourceVoltage * 1.2)) * graphH
+                    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y)
                 })
                 ctx.stroke()
 
-                // Current
+                // Current curve (yellow)
                 ctx.beginPath()
-                ctx.strokeStyle = '#facc15' // Yellow current
-                history.forEach((pt, i) => {
-                    const x = gx + ((pt.t - tMin) / 10) * graphW
-                    const y = gy - (pt.i * resistance / 12) * graphH // Scale I*R ~ V
-
-                    if (x < gx) return
-                    if (i === 0 || history[i - 1].t < tMin) ctx.moveTo(x, y)
-                    else ctx.lineTo(x, y)
+                ctx.strokeStyle = '#facc15'
+                ctx.lineWidth = 2
+                const iMax = sourceVoltage / resistance
+                historyRef.current.forEach((pt, i) => {
+                    const x = gx + ((pt.t - tMin) / (tMax - tMin)) * graphW
+                    const y = graphY + graphH - (Math.abs(pt.i) / (iMax * 1.2)) * graphH
+                    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y)
                 })
                 ctx.stroke()
             }
 
             // Legend
-            ctx.fillStyle = '#60a5fa'; ctx.fillText('Voltage (Vc)', gx + 20, gy - graphH + 20)
-            ctx.fillStyle = '#facc15'; ctx.fillText('Current (I)', gx + 120, gy - graphH + 20)
+            ctx.fillStyle = '#60a5fa'; ctx.textAlign = 'left'
+            ctx.fillText('Vc (voltage)', gx + 10, graphY + 15)
+            ctx.fillStyle = '#facc15'
+            ctx.fillText('I (current)', gx + 120, graphY + 15)
 
             requestAnimationFrame(animate)
         }
 
         const animId = requestAnimationFrame(animate)
-        return () => {
-            window.removeEventListener('resize', resize)
-            cancelAnimationFrame(animId)
-        }
-    }, [resistance, capacitance, sourceVoltage, isCharging])
+        return () => { window.removeEventListener('resize', resize); cancelAnimationFrame(animId) }
+    }, [resistance, capacitance, sourceVoltage, mode])
 
+    const energy = 0.5 * (capacitance / 1e4) * stateRef.current.v_c * stateRef.current.v_c
 
     return (
         <div className="min-h-screen flex flex-col bg-[#0d0a1a] text-white font-sans overflow-hidden">
-            <div className="absolute inset-0 pointer-events-none">
-                <PhysicsBackground />
-            </div>
-
-            {/* Navbar */}
+            <div className="absolute inset-0 pointer-events-none"><PhysicsBackground /></div>
             <div className="relative z-10 flex items-center justify-between px-6 py-4 border-b border-white/10 bg-[#0d0a1a]/80 backdrop-blur-md">
                 <div className="flex items-center gap-4">
                     <Link to="/physics" className="p-2 rounded-full hover:bg-white/10 transition-colors">
@@ -265,94 +267,60 @@ export default function RCCircuit() {
                     </Link>
                     <div>
                         <h1 className="text-xl font-medium tracking-tight">RC Circuits</h1>
-                        <p className="text-xs text-white/50">AP Physics 2: Circuits</p>
+                        <p className="text-xs text-white/50">Circuits</p>
                     </div>
+                    <APTag course="Physics 2" unit="Unit 4" color={PHYSICS_COLOR} />
                 </div>
+                <Button onClick={demo.open} variant="secondary">Demo Mode</Button>
             </div>
 
             <div className="flex-1 relative flex">
                 <div className="flex-1 relative">
                     <canvas ref={canvasRef} className="w-full h-full block" />
+                    <div className="absolute top-4 left-4 space-y-2">
+                        <EquationDisplay departmentColor={PHYSICS_COLOR} title="RC Equations"
+                            equations={[
+                                { label: 'Charging', expression: 'Vc = Vs(1 - e^(-t/RC))', description: 'Voltage across capacitor' },
+                                { label: 'Discharging', expression: 'Vc = V0 * e^(-t/RC)', description: 'Exponential decay' },
+                                { label: 'Time const', expression: 'tau = RC', description: 'Time constant' },
+                                { label: 'Energy', expression: 'U = (1/2)CV^2', description: 'Stored energy' },
+                            ]} />
+                    </div>
+                    <div className="absolute top-4 right-4">
+                        <InfoPanel departmentColor={PHYSICS_COLOR} title="Circuit State"
+                            items={[
+                                { label: 'Mode', value: mode },
+                                { label: 'Vc', value: stateRef.current.v_c.toFixed(2), unit: 'V' },
+                                { label: 'I', value: (stateRef.current.i * 1000).toFixed(1), unit: 'mA' },
+                                { label: 'tau', value: tau.toFixed(3), unit: 's' },
+                                { label: 'Energy', value: (energy * 1000).toFixed(2), unit: 'mJ' },
+                                { label: 'Time', value: timeRef.current.toFixed(2), unit: 's' },
+                            ]} />
+                    </div>
                 </div>
 
-                {/* Controls Sidebar */}
-                <div className="w-80 bg-[#0d0a1a]/90 border-l border-white/10 p-6 flex flex-col gap-6 overflow-y-auto no-scrollbar z-20">
-                    <div className="text-sm text-white/70 leading-relaxed">
-                        Visualize limits of exponential growth/decay.
-                        <br />
-                        τ = RC (Time Constant).
-                        <br />
-                        Charging: V increases. Discharging: V decreases.
-                    </div>
-
-                    <div className="h-px bg-white/10 my-2" />
-
-                    <div className="flex gap-2 mb-6">
-                        <button
-                            onClick={() => setIsCharging(true)}
-                            className={`flex-1 py-3 rounded-xl font-medium text-sm transition-all ${isCharging
-                                ? 'bg-green-500 text-white'
-                                : 'bg-white/5 text-white/50 hover:bg-white/10'
-                                }`}
-                        >
-                            Charge
-                        </button>
-                        <button
-                            onClick={() => setIsCharging(false)}
-                            className={`flex-1 py-3 rounded-xl font-medium text-sm transition-all ${!isCharging
-                                ? 'bg-red-500 text-white'
-                                : 'bg-white/5 text-white/50 hover:bg-white/10'
-                                }`}
-                        >
-                            Discharge
-                        </button>
-                    </div>
-
-                    <div className="space-y-6">
-                        <div>
-                            <div className="flex items-center justify-between mb-2">
-                                <label className="text-sm font-medium text-white/80">Resistance (R)</label>
-                                <span className="text-xs font-mono text-white/60">{resistance} Ω</span>
-                            </div>
-                            <input
-                                type="range" min="10" max="1000" step="10" value={resistance}
-                                onChange={(e) => setResistance(Number(e.target.value))}
-                                className="w-full h-1 bg-white/10 rounded-lg appearance-none cursor-pointer accent-white"
-                            />
-                        </div>
-
-                        <div>
-                            <div className="flex items-center justify-between mb-2">
-                                <label className="text-sm font-medium text-white/80">Capacitance (C)</label>
-                                <span className="text-xs font-mono text-white/60">{capacitance} μF</span>
-                            </div>
-                            <input
-                                type="range" min="10" max="500" step="10" value={capacitance}
-                                onChange={(e) => setCapacitance(Number(e.target.value))}
-                                className="w-full h-1 bg-white/10 rounded-lg appearance-none cursor-pointer accent-white"
-                            />
-                        </div>
-
-                        <div>
-                            <div className="flex items-center justify-between mb-2">
-                                <label className="text-sm font-medium text-white/80">Source Voltage</label>
-                                <span className="text-xs font-mono text-white/60">{sourceVoltage} V</span>
-                            </div>
-                            <input
-                                type="range" min="1" max="20" step="1" value={sourceVoltage}
-                                onChange={(e) => setSourceVoltage(Number(e.target.value))}
-                                className="w-full h-1 bg-white/10 rounded-lg appearance-none cursor-pointer accent-white"
-                            />
-                        </div>
-                    </div>
-
-                    <button
-                        onClick={reset}
-                        className="w-full py-3 mt-4 rounded-xl font-medium text-sm bg-white/5 text-white/60 hover:bg-white/10 hover:text-white transition-all"
-                    >
-                        Reset Capacitor (Short)
-                    </button>
+                <div className="w-72 bg-[#0d0a1a]/90 border-l border-white/10 p-5 flex flex-col gap-4 overflow-y-auto no-scrollbar z-20">
+                    <ControlPanel>
+                        <ButtonGroup label="Mode" value={mode} onChange={v => setMode(v as Mode)}
+                            options={[{ value: 'charge', label: 'Charge' }, { value: 'discharge', label: 'Discharge' }]}
+                            color={PHYSICS_COLOR} />
+                        <Select label="Presets" value={preset} onChange={setPreset} options={PRESETS} />
+                        <ControlGroup label="Resistance (R)">
+                            <Slider value={resistance} onChange={v => { setResistance(v); setPreset('custom') }} min={10} max={1000} step={10} label={`${resistance} ohm`} />
+                        </ControlGroup>
+                        <ControlGroup label="Capacitance (C)">
+                            <Slider value={capacitance} onChange={v => { setCapacitance(v); setPreset('custom') }} min={10} max={500} step={10} label={`${capacitance} uF`} />
+                        </ControlGroup>
+                        <ControlGroup label="Source Voltage">
+                            <Slider value={sourceVoltage} onChange={setSourceVoltage} min={1} max={20} step={1} label={`${sourceVoltage} V`} />
+                        </ControlGroup>
+                        <Button onClick={reset} variant="secondary">Reset</Button>
+                    </ControlPanel>
                 </div>
+            </div>
+
+            <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-30">
+                <DemoMode steps={demoSteps} currentStep={demo.currentStep} isOpen={demo.isOpen} onClose={demo.close} onNext={demo.next} onPrev={demo.prev} onGoToStep={demo.goToStep} departmentColor={PHYSICS_COLOR} />
             </div>
         </div>
     )

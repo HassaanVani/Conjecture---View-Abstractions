@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { APTag } from '@/components/info-panel'
 
 type ControlType = 'none' | 'ceiling' | 'floor' | 'tax' | 'subsidy'
 
@@ -55,6 +56,11 @@ export default function SupplyDemand() {
 
     // Shift reason display
     const [shiftReason, setShiftReason] = useState<{ type: 'demand' | 'supply', info: DeterminantInfo } | null>(null)
+
+    // Elasticity calculator
+    const [elastCalcPriceFrom, setElastCalcPriceFrom] = useState(50)
+    const [elastCalcPriceTo, setElastCalcPriceTo] = useState(40)
+    const [showElasticityCalc, setShowElasticityCalc] = useState(false)
 
     // UI state
     const [showDemo, setShowDemo] = useState(false)
@@ -114,6 +120,30 @@ export default function SupplyDemand() {
 
         return { consumerSurplus, producerSurplus, totalSurplus }
     }, [calculateEquilibrium, demandIntercept, supplyIntercept, demandShift, supplyShift])
+
+    // Midpoint elasticity calculator
+    const calcMidpointElasticity = useCallback(() => {
+        const p1 = elastCalcPriceFrom
+        const p2 = elastCalcPriceTo
+        const q1 = getQd(p1)
+        const q2 = getQd(p2)
+        const pctQ = (q2 - q1) / ((q2 + q1) / 2) * 100
+        const pctP = (p2 - p1) / ((p2 + p1) / 2) * 100
+        const ed = Math.abs(pctP) > 0.01 ? Math.abs(pctQ / pctP) : 0
+        return { pctQ: pctQ.toFixed(1), pctP: pctP.toFixed(1), ed: ed.toFixed(2), q1: q1.toFixed(0), q2: q2.toFixed(0) }
+    }, [elastCalcPriceFrom, elastCalcPriceTo, getQd])
+
+    // Total Revenue Test
+    const getTotalRevenueTest = useCallback(() => {
+        const eq = calculateEquilibrium()
+        const tr = eq.P * eq.Q
+        const elas = getElasticity()
+        let result: string
+        if (elas.demand > 1) result = 'Price decrease raises TR (elastic)'
+        else if (elas.demand < 1) result = 'Price decrease lowers TR (inelastic)'
+        else result = 'Price change has no effect on TR (unit elastic)'
+        return { tr: tr.toFixed(0), result }
+    }, [calculateEquilibrium, getElasticity])
 
     // Apply a determinant shift
     const applyDeterminant = (type: 'demand' | 'supply', info: DeterminantInfo) => {
@@ -716,6 +746,76 @@ export default function SupplyDemand() {
                         </div>
                     )}
                 </motion.div>
+
+                {/* AP Tag */}
+                <div className="absolute bottom-28 left-4">
+                    <APTag course="Microeconomics" unit="Unit 2" color="rgb(220, 180, 80)" />
+                </div>
+
+                {/* Total Revenue Display */}
+                <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="absolute bottom-40 left-4 bg-black/40 backdrop-blur-md rounded-xl px-3 py-2 border border-white/10"
+                >
+                    <div className="text-xs text-white/50 mb-1">Total Revenue Test</div>
+                    <div className="text-sm font-mono text-yellow-400">TR = ${getTotalRevenueTest().tr}</div>
+                    <div className="text-xs text-white/50 mt-1">{getTotalRevenueTest().result}</div>
+                </motion.div>
+
+                {/* Elasticity Calculator Toggle */}
+                <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="absolute bottom-28 left-[200px]"
+                >
+                    <button
+                        onClick={() => setShowElasticityCalc(!showElasticityCalc)}
+                        className="px-4 py-2 rounded-lg text-sm bg-white/5 text-white/70 hover:bg-white/10 hover:text-white transition-colors border border-white/10"
+                    >
+                        Elasticity Calculator
+                    </button>
+                </motion.div>
+
+                {/* Elasticity Calculator Modal */}
+                <AnimatePresence>
+                    {showElasticityCalc && (
+                        <motion.div
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: 10 }}
+                            className="absolute bottom-44 left-[200px] bg-[#1a150a] border border-white/20 rounded-xl p-4 shadow-2xl w-72"
+                        >
+                            <div className="flex items-center justify-between mb-3">
+                                <h4 className="text-sm font-medium text-yellow-400">Midpoint Elasticity</h4>
+                                <button onClick={() => setShowElasticityCalc(false)} className="text-white/40 hover:text-white text-lg">x</button>
+                            </div>
+                            <div className="space-y-3">
+                                <div className="flex items-center gap-2">
+                                    <span className="text-xs text-white/50 w-16">P from:</span>
+                                    <input type="range" min={10} max={90} value={elastCalcPriceFrom}
+                                        onChange={e => setElastCalcPriceFrom(+e.target.value)}
+                                        className="flex-1 accent-yellow-400" />
+                                    <span className="text-xs font-mono text-yellow-400 w-8">${elastCalcPriceFrom}</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <span className="text-xs text-white/50 w-16">P to:</span>
+                                    <input type="range" min={10} max={90} value={elastCalcPriceTo}
+                                        onChange={e => setElastCalcPriceTo(+e.target.value)}
+                                        className="flex-1 accent-yellow-400" />
+                                    <span className="text-xs font-mono text-yellow-400 w-8">${elastCalcPriceTo}</span>
+                                </div>
+                                <div className="border-t border-white/10 pt-2 text-xs space-y-1">
+                                    <div className="flex justify-between"><span className="text-white/50">Qd at P1:</span><span className="text-white/80 font-mono">{calcMidpointElasticity().q1}</span></div>
+                                    <div className="flex justify-between"><span className="text-white/50">Qd at P2:</span><span className="text-white/80 font-mono">{calcMidpointElasticity().q2}</span></div>
+                                    <div className="flex justify-between"><span className="text-white/50">%dQ:</span><span className="text-white/80 font-mono">{calcMidpointElasticity().pctQ}%</span></div>
+                                    <div className="flex justify-between"><span className="text-white/50">%dP:</span><span className="text-white/80 font-mono">{calcMidpointElasticity().pctP}%</span></div>
+                                    <div className="flex justify-between font-medium"><span className="text-yellow-400">Ed (midpoint):</span><span className="text-yellow-400 font-mono">{calcMidpointElasticity().ed}</span></div>
+                                </div>
+                            </div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
 
                 {/* Control Type Selector */}
                 <motion.div

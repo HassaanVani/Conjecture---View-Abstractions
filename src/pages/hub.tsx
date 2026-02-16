@@ -8,9 +8,10 @@ import {
     ChemistryBackground,
     CSBackground,
     EconomicsBackground,
+    CalculusBackground,
 } from '@/components/backgrounds'
 
-type Department = 'math' | 'physics' | 'biology' | 'chemistry' | 'cs' | 'economics'
+type Department = 'math' | 'physics' | 'biology' | 'chemistry' | 'cs' | 'economics' | 'calculus'
 
 interface Visualization {
     id: string
@@ -78,8 +79,24 @@ const departments: DepartmentData[] = [
                 id: 'ap-physics',
                 title: 'AP Physics Hub',
                 symbol: '🍎',
-                description: 'Full AP curriculum for Physics 1 & 2',
+                description: 'Full AP curriculum for Physics 1, 2, C:Mech & C:E&M',
                 to: '/physics',
+            },
+        ],
+    },
+    {
+        id: 'calculus',
+        name: 'Calculus',
+        icon: '∫',
+        color: 'rgb(180, 120, 255)',
+        bgColor: '#120a1a',
+        visualizations: [
+            {
+                id: 'ap-calculus',
+                title: 'AP Calculus Hub',
+                symbol: '∮',
+                description: 'Full AP curriculum for Calculus AB & BC',
+                to: '/calculus',
             },
         ],
     },
@@ -91,18 +108,11 @@ const departments: DepartmentData[] = [
         bgColor: '#0a1a12',
         visualizations: [
             {
-                id: 'cell-division',
-                title: 'Cell Division',
-                symbol: '⊕',
-                description: 'The choreography of mitosis',
-                to: '/biology/cell-division',
-            },
-            {
-                id: 'population',
-                title: 'Population Dynamics',
-                symbol: 'dN/dt',
-                description: 'Logistic growth and carrying capacity',
-                to: '/biology/population',
+                id: 'ap-biology',
+                title: 'AP Biology Hub',
+                symbol: '🧬',
+                description: 'Full AP curriculum for Biology',
+                to: '/biology',
             },
         ],
     },
@@ -114,18 +124,11 @@ const departments: DepartmentData[] = [
         bgColor: '#1a120a',
         visualizations: [
             {
-                id: 'bonds',
-                title: 'Molecular Bonds',
-                symbol: '⋮⋮',
-                description: 'Electrons dancing between atoms',
-                to: '/chemistry/bonds',
-            },
-            {
-                id: 'reactions',
-                title: 'Reaction Kinetics',
-                symbol: 'k',
-                description: 'Collision theory in action',
-                to: '/chemistry/reactions',
+                id: 'ap-chemistry',
+                title: 'AP Chemistry Hub',
+                symbol: '⚗',
+                description: 'Full AP curriculum for Chemistry',
+                to: '/chemistry',
             },
         ],
     },
@@ -137,25 +140,11 @@ const departments: DepartmentData[] = [
         bgColor: '#0a1518',
         visualizations: [
             {
-                id: 'sorting',
-                title: 'Sorting Algorithms',
-                symbol: 'O(n)',
-                description: 'Racing complexity through ordered chaos',
-                to: '/cs/sorting',
-            },
-            {
-                id: 'binary',
-                title: 'Binary Search',
-                symbol: 'log₂',
-                description: 'Divide and conquer in logarithmic time',
-                to: '/cs/binary-search',
-            },
-            {
-                id: 'graphs',
-                title: 'Graph Traversal',
-                symbol: 'G(V,E)',
-                description: 'BFS, DFS, Dijkstra & A* pathfinding',
-                to: '/cs/graphs',
+                id: 'ap-cs',
+                title: 'AP CS Hub',
+                symbol: '⌘',
+                description: 'Data structures & algorithms for AP CS A',
+                to: '/cs',
             },
         ],
     },
@@ -180,6 +169,7 @@ const departments: DepartmentData[] = [
 const backgroundComponents = {
     math: MathBackground,
     physics: PhysicsBackground,
+    calculus: CalculusBackground,
     biology: BiologyBackground,
     chemistry: ChemistryBackground,
     cs: CSBackground,

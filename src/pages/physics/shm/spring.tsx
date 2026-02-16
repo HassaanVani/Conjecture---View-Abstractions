@@ -1,45 +1,54 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { Link } from 'react-router-dom'
 import { PhysicsBackground } from '@/components/backgrounds'
+import { ControlPanel, Slider, Button, Toggle } from '@/components/control-panel'
+import { EquationDisplay } from '@/components/equation-display'
+import { InfoPanel, APTag } from '@/components/info-panel'
+import { DemoMode, useDemoMode } from '@/components/demo-mode'
+
+const PC = 'rgb(160, 100, 255)'
 
 export default function SpringMass() {
     const canvasRef = useRef<HTMLCanvasElement>(null)
     const [isRunning, setIsRunning] = useState(false)
     const [mass, setMass] = useState(2)
-    const [k, setK] = useState(50) // Spring constant
+    const [k, setK] = useState(50)
     const [damping, setDamping] = useState(0.5)
     const [gravity, setGravity] = useState(9.8)
     const [showEnergy, setShowEnergy] = useState(true)
+    const [showPhaseSpace, setShowPhaseSpace] = useState(true)
 
     const stateRef = useRef({
-        y: 0, // Displacement from equilibrium (positive down)
-        vy: 0,
-        t: 0,
-        history: [] as { t: number, y: number }[]
+        y: 100, vy: 0, t: 0,
+        history: [] as { t: number; y: number }[],
+        phaseHistory: [] as { y: number; vy: number }[],
     })
 
-    // Equilibrium position (where mg = k*extension_static)
-    // We can define y=0 as the *unstretched* spring position?
-    // Or y=0 as the *static equilibrium* position?
-    // Let's define y=0 as the UNSTRETCHED spring end.
-    // Static equilibrium will be at y_eq = mg/k.
+    const scaleFactor = 20
+    const gPix = gravity * scaleFactor
+    const yEq = (mass * gPix) / k
+    const omega = Math.sqrt(k / mass)
+    const period = 2 * Math.PI / omega
+    const amplitude = Math.abs(stateRef.current.y - yEq)
+    const curVel = stateRef.current.vy
 
-    // Initial condition: Start pulled down a bit.
-
-    const reset = () => {
+    const reset = useCallback(() => {
         setIsRunning(false)
-        stateRef.current = {
-            y: 100, // Start stretched 100px (or units)
-            vy: 0,
-            t: 0,
-            history: []
-        }
-    }
+        stateRef.current = { y: 100, vy: 0, t: 0, history: [], phaseHistory: [] }
+    }, [])
 
-    useEffect(() => {
-        // Reset when parameters change significantly? No, let physics adjust.
-        // But if mass changes, equilibrium changes.
-    }, [mass, k, gravity])
+    const demoSteps = [
+        { title: 'Simple Harmonic Motion', description: 'A mass on a spring oscillates around its equilibrium position. The restoring force is proportional to displacement: F = -kx.', highlight: 'Press Start to begin oscillation.' },
+        { title: 'Equilibrium Position', description: 'The dashed line shows where mg = kx (static equilibrium). Oscillation occurs around this point, not the natural spring length.', setup: () => { setDamping(0); setShowEnergy(true) } },
+        { title: 'Period & Frequency', description: 'T = 2\u03C0\u221A(m/k). The period depends only on mass and spring constant, not amplitude. Try changing m and k.', setup: () => { setMass(2); setK(50) } },
+        { title: 'Energy Exchange', description: 'PE_elastic and KE continuously exchange. At maximum displacement, all energy is potential. At equilibrium, all energy is kinetic.', setup: () => { setShowEnergy(true); setDamping(0) } },
+        { title: 'Phase Space', description: 'The v-vs-x plot shows an ellipse for undamped SHM. This is called phase space. The trajectory repeats perfectly without damping.', setup: () => { setShowPhaseSpace(true); setDamping(0) } },
+        { title: 'Damping', description: 'Real systems lose energy to friction. Increase damping to see the amplitude decay exponentially. The phase space spiral inward.', setup: () => { setDamping(2); setShowPhaseSpace(true) } },
+        { title: 'Amplitude Readout', description: 'The info panel shows real-time values for amplitude, period, velocity, and energy. All are calculated from the physics state.', highlight: 'Check the right panel for live values.' },
+        { title: 'Experiment!', description: 'Adjust mass, spring constant, damping, and gravity. Observe how each parameter affects the oscillation.' },
+    ]
+
+    const demo = useDemoMode(demoSteps)
 
     useEffect(() => {
         const canvas = canvasRef.current
@@ -48,9 +57,10 @@ export default function SpringMass() {
         if (!ctx) return
 
         const resize = () => {
-            canvas.width = canvas.offsetWidth * window.devicePixelRatio
-            canvas.height = canvas.offsetHeight * window.devicePixelRatio
-            ctx.scale(window.devicePixelRatio, window.devicePixelRatio)
+            const dpr = window.devicePixelRatio || 1
+            canvas.width = canvas.offsetWidth * dpr
+            canvas.height = canvas.offsetHeight * dpr
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
         }
         resize()
         window.addEventListener('resize', resize)
@@ -61,329 +71,215 @@ export default function SpringMass() {
         const animate = () => {
             const width = canvas.offsetWidth
             const height = canvas.offsetHeight
+            const s = stateRef.current
 
             if (isRunning) {
-                // Forces
-                // F_spring = -k * y
-                // F_damping = -c * vy
-                // F_net = mg - ky - c*vy
+                const Fnet = (mass * gPix) - (k * s.y) - (damping * s.vy)
+                const acc = Fnet / mass
+                s.vy += acc * dt
+                s.y += s.vy * dt
+                s.t += dt
 
-                // Note: y is displacement from UNSTRETCHED length.
-                // Positive y is DOWN (extension).
-                // Gravity acts DOWN (+mg).
-                // Spring force acts UP (-ky).
-
-                // *10 to scale to pixels somewhat? 
-                // Let's say 1 unit = 1 pixel for now, but g=9.8 is small for pixels.
-                // Let's multiply g by a scale factor. 
-                const scale = 20 // pixels per meter
-                const g_pix = gravity * scale
-
-                const F_net = (mass * g_pix) - (k * stateRef.current.y) - (damping * stateRef.current.vy)
-                const acc = F_net / mass
-
-                stateRef.current.vy += acc * dt
-                stateRef.current.y += stateRef.current.vy * dt
-                stateRef.current.t += dt
-
-                // History for graph
-                if (stateRef.current.t % 0.05 < dt * 1.5) {
-                    stateRef.current.history.push({ t: stateRef.current.t, y: stateRef.current.y })
-                    if (stateRef.current.history.length > 200) stateRef.current.history.shift()
+                if (s.t % 0.05 < dt * 1.5) {
+                    s.history.push({ t: s.t, y: s.y })
+                    if (s.history.length > 200) s.history.shift()
+                }
+                if (s.t % 0.03 < dt * 1.5) {
+                    s.phaseHistory.push({ y: s.y - yEq, vy: s.vy })
+                    if (s.phaseHistory.length > 400) s.phaseHistory.shift()
                 }
             }
 
-            // Draw
             ctx.clearRect(0, 0, width, height)
-
-            const cx = width / 3
+            const cx = width * 0.28
             const mountY = 50
 
-            // Draw Support
-            ctx.fillStyle = '#94a3b8'
+            // Support
+            ctx.fillStyle = '#64748b'
             ctx.fillRect(cx - 50, mountY - 10, 100, 10)
-
-            // Draw Spring
-            // Zigzag from mountY to mountY + unstretched_length + y
-            const unstretchedLen = 150
-            const currentLen = unstretchedLen + stateRef.current.y
-
-            ctx.beginPath()
-            ctx.moveTo(cx, mountY)
-            const coils = 12
-            const coilH = currentLen / coils
-            for (let i = 0; i < coils; i += 1) {
-                const xOffset = i % 2 === 0 ? 15 : -15
-                // Smooth spring or zig zag? Zig zag is easier
-                ctx.lineTo(cx + xOffset, mountY + (i + 0.5) * coilH)
-                ctx.lineTo(cx - xOffset, mountY + (i + 1) * coilH)
+            for (let i = -50; i < 50; i += 8) {
+                ctx.strokeStyle = '#475569'; ctx.lineWidth = 1
+                ctx.beginPath(); ctx.moveTo(cx + i, mountY - 10); ctx.lineTo(cx + i - 5, mountY - 15); ctx.stroke()
             }
-            ctx.lineTo(cx, mountY + currentLen)
-            ctx.strokeStyle = '#cbd5e1'
-            ctx.lineWidth = 2
-            ctx.stroke() // Just stroke, don't close
 
-            // Draw Mass
+            // Spring zigzag
+            const unstrLen = 150
+            const curLen = unstrLen + s.y
+            ctx.beginPath(); ctx.moveTo(cx, mountY)
+            const coils = 12; const coilH = curLen / coils
+            for (let i = 0; i < coils; i++) {
+                const xOff = i % 2 === 0 ? 15 : -15
+                ctx.lineTo(cx + xOff, mountY + (i + 0.5) * coilH)
+                ctx.lineTo(cx - xOff, mountY + (i + 1) * coilH)
+            }
+            ctx.lineTo(cx, mountY + curLen)
+            ctx.strokeStyle = '#cbd5e1'; ctx.lineWidth = 2; ctx.stroke()
+
+            // Mass box
             const boxSize = 40 + Math.sqrt(mass) * 5
-            ctx.fillStyle = '#3b82f6'
-            ctx.fillRect(cx - boxSize / 2, mountY + currentLen, boxSize, boxSize)
+            ctx.fillStyle = PC; ctx.shadowColor = PC; ctx.shadowBlur = 10
+            ctx.fillRect(cx - boxSize / 2, mountY + curLen, boxSize, boxSize)
+            ctx.shadowBlur = 0
+            ctx.strokeStyle = 'rgba(255,255,255,0.2)'; ctx.strokeRect(cx - boxSize / 2, mountY + curLen, boxSize, boxSize)
+            ctx.fillStyle = 'white'; ctx.font = 'bold 12px monospace'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'
+            ctx.fillText(`${mass}kg`, cx, mountY + curLen + boxSize / 2)
 
-            ctx.fillStyle = 'white'
-            ctx.font = '12px monospace'
-            ctx.textAlign = 'center'
-            ctx.textBaseline = 'middle'
-            ctx.fillText(`${mass}kg`, cx, mountY + currentLen + boxSize / 2)
+            // Equilibrium line
+            const eqY = mountY + unstrLen + yEq
+            ctx.beginPath(); ctx.setLineDash([5, 5])
+            ctx.moveTo(cx - 80, eqY); ctx.lineTo(cx + 80, eqY)
+            ctx.strokeStyle = 'rgba(160,100,255,0.4)'; ctx.lineWidth = 1; ctx.stroke(); ctx.setLineDash([])
+            ctx.fillStyle = 'rgba(160,100,255,0.5)'; ctx.font = '10px monospace'
+            ctx.fillText('Equilibrium', cx + 100, eqY)
 
-            // Draw Equilibrium Line (Static)
-            const scale = 20
-            const g_pix = gravity * scale
-            const y_eq = (mass * g_pix) / k
-            const eqY = mountY + unstretchedLen + y_eq
+            // Displacement vs Time graph
+            const gx = width * 0.58; const gw = width * 0.38; const gh = height * 0.28; const gy = height * 0.08
+            ctx.strokeStyle = 'rgba(255,255,255,0.15)'; ctx.lineWidth = 1
+            ctx.beginPath(); ctx.moveTo(gx, gy); ctx.lineTo(gx, gy + gh); ctx.stroke()
+            ctx.beginPath(); ctx.moveTo(gx, gy + gh / 2); ctx.lineTo(gx + gw, gy + gh / 2); ctx.stroke()
+            ctx.fillStyle = PC; ctx.font = '11px monospace'; ctx.textAlign = 'center'
+            ctx.fillText('Displacement vs Time', gx + gw / 2, gy - 8)
 
-            ctx.beginPath()
-            ctx.setLineDash([5, 5])
-            ctx.moveTo(cx - 100, eqY)
-            ctx.lineTo(cx + 100, eqY)
-            ctx.strokeStyle = 'rgba(255,255,255,0.3)'
-            ctx.lineWidth = 1
-            ctx.stroke()
-            ctx.setLineDash([])
-            ctx.fillStyle = 'rgba(255,255,255,0.3)'
-            ctx.fillText('Equilibrium', cx + 120, eqY)
-
-            // Draw Graph (Right side)
-            const gx = width * 0.6
-            const gw = width * 0.35
-            const gh = height * 0.3
-            const gy = height * 0.35
-
-            // Graph Axis
-            ctx.strokeStyle = 'white'
-            ctx.lineWidth = 1
-            ctx.beginPath()
-            ctx.moveTo(gx, gy)
-            ctx.lineTo(gx, gy + gh)
-            ctx.lineTo(gx + gw, gy + gh / 2) // t axis in middle
-            ctx.stroke()
-
-            // Plot y vs t
-            ctx.beginPath()
-            ctx.strokeStyle = '#38bdf8'
-            ctx.lineWidth = 2
-
-            // Scale factors for graph
-            const timeWindow = 10 // seconds view
-            const yScale = 0.5 // pixels per displacement unit
-
-            if (stateRef.current.history.length > 1) {
-                const lastPt = stateRef.current.history[stateRef.current.history.length - 1]
-                const endTime = lastPt.t
-
-                stateRef.current.history.forEach((pt, i) => {
-                    // Map t to x (scrolling)
-                    // If t < timeWindow, start at gx.
-                    // If t > timeWindow, shift.
-                    // Let's just fit last 10 seconds?
-
-                    const timeSinceEnd = endTime - pt.t
-                    if (timeSinceEnd > timeWindow) return
-
-                    const drawX = gx + gw - (timeSinceEnd / timeWindow) * gw
-                    // y=eq corresponds to center line (gy + gh/2)
-                    // val = pt.y - y_eq
-                    const val = pt.y - y_eq
-                    const drawY = (gy + gh / 2) + val * yScale
-
-                    if (i === 0 || drawX < gx) ctx.moveTo(Math.max(gx, drawX), drawY)
-                    else ctx.lineTo(Math.max(gx, drawX), drawY)
+            if (s.history.length > 1) {
+                ctx.beginPath(); ctx.strokeStyle = PC; ctx.lineWidth = 2
+                const last = s.history[s.history.length - 1]
+                s.history.forEach((pt, i) => {
+                    const tDiff = last.t - pt.t; if (tDiff > 10) return
+                    const dx = gx + gw - (tDiff / 10) * gw
+                    const dy = (gy + gh / 2) + (pt.y - yEq) * 0.5
+                    i === 0 || dx < gx ? ctx.moveTo(Math.max(gx, dx), dy) : ctx.lineTo(Math.max(gx, dx), dy)
                 })
                 ctx.stroke()
             }
 
-            ctx.fillStyle = '#38bdf8'
-            ctx.fillText('Displacement vs Time', gx + gw / 2, gy - 20)
+            // Phase space plot
+            if (showPhaseSpace) {
+                const px = width * 0.58; const pw = width * 0.38; const ph = height * 0.28; const py = height * 0.42
+                ctx.strokeStyle = 'rgba(255,255,255,0.15)'; ctx.lineWidth = 1
+                ctx.beginPath(); ctx.moveTo(px, py + ph / 2); ctx.lineTo(px + pw, py + ph / 2); ctx.stroke()
+                ctx.beginPath(); ctx.moveTo(px + pw / 2, py); ctx.lineTo(px + pw / 2, py + ph); ctx.stroke()
+                ctx.fillStyle = '#38bdf8'; ctx.font = '11px monospace'; ctx.textAlign = 'center'
+                ctx.fillText('Phase Space (v vs x)', px + pw / 2, py - 8)
+                ctx.fillStyle = 'rgba(255,255,255,0.3)'; ctx.font = '9px monospace'
+                ctx.fillText('x', px + pw - 5, py + ph / 2 - 5)
+                ctx.fillText('v', px + pw / 2 + 8, py + 8)
 
+                if (s.phaseHistory.length > 1) {
+                    ctx.beginPath(); ctx.strokeStyle = '#38bdf8'; ctx.lineWidth = 1.5
+                    s.phaseHistory.forEach((pt, i) => {
+                        const dx = px + pw / 2 + pt.y * 0.4
+                        const dy = py + ph / 2 - pt.vy * 0.15
+                        i === 0 ? ctx.moveTo(dx, dy) : ctx.lineTo(dx, dy)
+                    })
+                    ctx.stroke()
+                    const last = s.phaseHistory[s.phaseHistory.length - 1]
+                    ctx.fillStyle = '#38bdf8'; ctx.beginPath()
+                    ctx.arc(px + pw / 2 + last.y * 0.4, py + ph / 2 - last.vy * 0.15, 3, 0, Math.PI * 2); ctx.fill()
+                }
+            }
 
-            // Energy Bars?
+            // Energy bars
             if (showEnergy) {
-                // PE_spring = 0.5 * k * y^2
-                // PE_grav = m * g * (H - y)? (Relative to arbitrary zero)
-                // KE = 0.5 * m * v^2
+                const distFromEq = s.y - yEq
+                const peEff = 0.5 * k * distFromEq * distFromEq / 1000
+                const keVal = 0.5 * mass * s.vy * s.vy / 1000
+                const totalEff = peEff + keVal
 
-                // Let's use equilibrium as y=0 for PE_total?
-                // Or stick to absolute definitions.
+                const bx = width * 0.58; const by = height * 0.78; const bw = 28; const maxH = 80
+                ctx.fillStyle = 'rgba(0,0,0,0.4)'; ctx.fillRect(bx - 5, by - 20, 140, maxH + 40)
+                ctx.fillStyle = 'white'; ctx.font = '11px monospace'; ctx.textAlign = 'center'
+                ctx.fillText('Energy', bx + 55, by - 6)
 
-                // PE_spring
-                const pes = 0.5 * k * (stateRef.current.y * stateRef.current.y) / 1000 // Scale down
-
-                // KE
-                const ke = 0.5 * mass * (stateRef.current.vy * stateRef.current.vy) / 1000
-
-                // Drawing bars
-                const barX = gx
-                const barY = gy + gh + 50
-                const barW = 30
-                const maxH = 100
-
-                // PES
-                ctx.fillStyle = '#3b82f6'
-                const h1 = Math.min(maxH, pes)
-                ctx.fillRect(barX, barY + maxH - h1, barW, h1)
-                ctx.fillText('PEs', barX + barW / 2, barY + maxH + 15)
-
-                // KE
-                ctx.fillStyle = '#22c55e'
-                const h2 = Math.min(maxH, ke)
-                ctx.fillRect(barX + 50, barY + maxH - h2, barW, h2)
-                ctx.fillText('KE', barX + 50 + barW / 2, barY + maxH + 15)
-
-                // Total
-                ctx.fillStyle = '#eab308'
-
-                // Wait, SHM E = K + U_spring_effective from equilibrium.
-                // U_eff = 0.5 * k * (y - y_eq)^2.
-                // Let's visualize THAT energy, which is conserved (plus damping loss).
-
-                const distFromEq = stateRef.current.y - y_eq
-                const pe_eff = 0.5 * k * (distFromEq * distFromEq) / 1000
-                const total_eff = pe_eff + ke
-
-                // Clear prev bars and draw Effective Energy
-                const h4 = Math.min(maxH, pe_eff)
-                const h5 = Math.min(maxH, total_eff)
-
-                // Redraw correct physics bars
-                // 1. Kinetic
-                ctx.fillStyle = '#22c55e'
-                ctx.fillRect(barX + 50, barY + maxH - h2, barW, h2)
-
-                // 2. Potential (Effective around Eq)
-                ctx.fillStyle = '#3b82f6'
-                ctx.fillRect(barX, barY + maxH - h4, barW, h4)
-
-                // 3. Total (Effective)
-                ctx.fillStyle = '#eab308'
-                ctx.fillRect(barX + 100, barY + maxH - h5, barW, h5)
-                ctx.fillText('Tot', barX + 100 + barW / 2, barY + maxH + 15)
+                const bars = [
+                    { label: 'PE', val: peEff, color: '#3b82f6' },
+                    { label: 'KE', val: keVal, color: '#22c55e' },
+                    { label: 'Tot', val: totalEff, color: '#eab308' },
+                ]
+                bars.forEach((b, i) => {
+                    const bH = totalEff > 0 ? Math.min(maxH, (b.val / totalEff) * maxH) : 0
+                    ctx.fillStyle = b.color
+                    ctx.fillRect(bx + i * (bw + 10), by + maxH - bH, bw, bH)
+                    ctx.fillStyle = 'rgba(255,255,255,0.5)'; ctx.font = '9px monospace'
+                    ctx.fillText(b.label, bx + i * (bw + 10) + bw / 2, by + maxH + 12)
+                })
             }
 
             animId = requestAnimationFrame(animate)
         }
 
         animId = requestAnimationFrame(animate)
-        return () => {
-            window.removeEventListener('resize', resize)
-            cancelAnimationFrame(animId)
-        }
-    }, [isRunning, mass, k, damping, gravity, showEnergy])
+        return () => { window.removeEventListener('resize', resize); cancelAnimationFrame(animId) }
+    }, [isRunning, mass, k, damping, gravity, showEnergy, showPhaseSpace, gPix, yEq])
 
     return (
         <div className="min-h-screen flex flex-col bg-[#0d0a1a] text-white font-sans overflow-hidden">
-            <div className="absolute inset-0 pointer-events-none">
-                <PhysicsBackground />
-            </div>
+            <div className="absolute inset-0 pointer-events-none"><PhysicsBackground /></div>
 
-            {/* Navbar */}
             <div className="relative z-10 flex items-center justify-between px-6 py-4 border-b border-white/10 bg-[#0d0a1a]/80 backdrop-blur-md">
                 <div className="flex items-center gap-4">
                     <Link to="/physics" className="p-2 rounded-full hover:bg-white/10 transition-colors">
-                        <svg className="w-5 h-5 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                        </svg>
+                        <svg className="w-5 h-5 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
                     </Link>
                     <div>
                         <h1 className="text-xl font-medium tracking-tight">Spring Oscillator</h1>
                         <p className="text-xs text-white/50">Simple Harmonic Motion</p>
                     </div>
                 </div>
+                <div className="flex items-center gap-3">
+                    <APTag course="Physics 1" unit="Unit 6" color={PC} />
+                    <Button onClick={demo.open} variant="secondary">Demo Mode</Button>
+                </div>
             </div>
 
             <div className="flex-1 relative flex">
                 <div className="flex-1 relative">
                     <canvas ref={canvasRef} className="w-full h-full block" />
+
+                    <div className="absolute bottom-4 left-4 flex flex-col gap-3 max-w-[260px]">
+                        <EquationDisplay departmentColor={PC} equations={[
+                            { label: 'Hooke', expression: 'F = \u2212kx' },
+                            { label: 'Period', expression: 'T = 2\u03C0\u221A(m/k)', description: `= ${period.toFixed(3)} s` },
+                            { label: 'Frequency', expression: '\u03C9 = \u221A(k/m)', description: `= ${omega.toFixed(2)} rad/s` },
+                            { label: 'PE elastic', expression: 'U = \u00BDkx\u00B2' },
+                            { label: 'KE', expression: 'K = \u00BDmv\u00B2' },
+                        ]} />
+                    </div>
+
+                    <div className="absolute bottom-4 right-4">
+                        <InfoPanel departmentColor={PC} title="Oscillation Data" items={[
+                            { label: 'Amplitude', value: amplitude, unit: 'px' },
+                            { label: 'Period', value: period, unit: 's' },
+                            { label: '\u03C9', value: omega, unit: 'rad/s' },
+                            { label: 'Velocity', value: curVel, unit: 'px/s' },
+                            { label: 'Displacement', value: stateRef.current.y - yEq, unit: 'px' },
+                            { label: 'Time', value: stateRef.current.t, unit: 's' },
+                        ]} />
+                    </div>
+
+                    {demo.isOpen && (
+                        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-30">
+                            <DemoMode steps={demoSteps} currentStep={demo.currentStep} isOpen={demo.isOpen} onClose={demo.close} onNext={demo.next} onPrev={demo.prev} onGoToStep={demo.goToStep} departmentColor={PC} />
+                        </div>
+                    )}
                 </div>
 
-                {/* Controls Sidebar */}
-                <div className="w-80 bg-[#0d0a1a]/90 border-l border-white/10 p-6 flex flex-col gap-6 overflow-y-auto no-scrollbar z-20">
-                    <div>
-                        <div className="flex items-center justify-between mb-2">
-                            <label className="text-sm font-medium text-white/80">Mass (m)</label>
-                            <span className="text-xs font-mono text-purple-400">{mass} kg</span>
-                        </div>
-                        <input
-                            type="range" min="1" max="10" step="0.5" value={mass}
-                            onChange={(e) => setMass(Number(e.target.value))}
-                            className="w-full h-1 bg-white/10 rounded-lg appearance-none cursor-pointer accent-purple-500"
-                        />
-                    </div>
-
-                    <div>
-                        <div className="flex items-center justify-between mb-2">
-                            <label className="text-sm font-medium text-white/80">Spring Constant (k)</label>
-                            <span className="text-xs font-mono text-blue-400">{k} N/m</span>
-                        </div>
-                        <input
-                            type="range" min="10" max="200" step="5" value={k}
-                            onChange={(e) => setK(Number(e.target.value))}
-                            className="w-full h-1 bg-white/10 rounded-lg appearance-none cursor-pointer accent-blue-500"
-                        />
-                    </div>
-
-                    <div>
-                        <div className="flex items-center justify-between mb-2">
-                            <label className="text-sm font-medium text-white/80">Damping (c)</label>
-                            <span className="text-xs font-mono text-red-400">{damping}</span>
-                        </div>
-                        <input
-                            type="range" min="0" max="5" step="0.1" value={damping}
-                            onChange={(e) => setDamping(Number(e.target.value))}
-                            className="w-full h-1 bg-white/10 rounded-lg appearance-none cursor-pointer accent-red-500"
-                        />
-                    </div>
-
-                    <div>
-                        <div className="flex items-center justify-between mb-2">
-                            <label className="text-sm font-medium text-white/80">Gravity</label>
-                            <span className="text-xs font-mono text-indigo-400">{gravity} m/s²</span>
-                        </div>
-                        <input
-                            type="range" min="0" max="20" step="0.1" value={gravity}
-                            onChange={(e) => setGravity(Number(e.target.value))}
-                            className="w-full h-1 bg-white/10 rounded-lg appearance-none cursor-pointer accent-indigo-500"
-                        />
-                    </div>
-
-                    <div className="h-px bg-white/10 my-2" />
+                <div className="w-80 bg-[#0d0a1a]/90 border-l border-white/10 p-6 flex flex-col gap-5 overflow-y-auto no-scrollbar z-20">
+                    <ControlPanel>
+                        <Slider label={`Mass (m) \u2014 ${mass} kg`} value={mass} onChange={setMass} min={1} max={10} step={0.5} />
+                        <Slider label={`Spring Constant (k) \u2014 ${k} N/m`} value={k} onChange={setK} min={10} max={200} step={5} />
+                        <Slider label={`Damping (c) \u2014 ${damping}`} value={damping} onChange={setDamping} min={0} max={5} step={0.1} />
+                        <Slider label={`Gravity \u2014 ${gravity} m/s\u00B2`} value={gravity} onChange={setGravity} min={0} max={20} step={0.1} />
+                    </ControlPanel>
 
                     <div className="flex gap-2">
-                        <button
-                            onClick={() => setIsRunning(!isRunning)}
-                            className={`flex-1 py-3 rounded-xl font-medium text-sm transition-all ${isRunning
-                                    ? 'bg-red-500/20 text-red-400 hover:bg-red-500/30'
-                                    : 'bg-green-500 text-white hover:bg-green-400'
-                                }`}
-                        >
+                        <Button onClick={() => setIsRunning(!isRunning)} className="flex-1">
                             {isRunning ? 'Pause' : 'Start Oscillation'}
-                        </button>
-                        <button
-                            onClick={reset}
-                            className="px-4 py-3 rounded-xl font-medium text-sm bg-white/5 text-white/60 hover:bg-white/10 hover:text-white transition-all"
-                        >
-                            Reset
-                        </button>
+                        </Button>
+                        <Button onClick={reset} variant="secondary">Reset</Button>
                     </div>
 
-                    <div className="pt-2">
-                        <label className="flex items-center justify-between cursor-pointer group">
-                            <span className="text-sm text-white/60 group-hover:text-white/80 transition-colors">Show Energy</span>
-                            <input
-                                type="checkbox"
-                                checked={showEnergy}
-                                onChange={(e) => setShowEnergy(e.target.checked)}
-                                className="accent-blue-500"
-                            />
-                        </label>
-                    </div>
+                    <Toggle label="Energy Diagram" value={showEnergy} onChange={setShowEnergy} />
+                    <Toggle label="Phase Space Plot" value={showPhaseSpace} onChange={setShowPhaseSpace} />
                 </div>
             </div>
         </div>
