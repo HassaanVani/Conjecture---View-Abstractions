@@ -1,5 +1,9 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
+import { ControlPanel, ControlGroup, Slider, Button, Toggle } from '@/components/control-panel'
+import { EquationDisplay } from '@/components/equation-display'
+import { InfoPanel, APTag } from '@/components/info-panel'
+import { DemoMode, useDemoMode } from '@/components/demo-mode'
+import type { DemoStep } from '@/components/demo-mode'
 
 type Phase = 'peak' | 'recession' | 'trough' | 'expansion'
 
@@ -11,35 +15,13 @@ interface PhaseInfo {
     policy: string
 }
 
+const GOLD = 'rgb(220, 180, 80)'
+
 const phaseInfo: Record<Phase, PhaseInfo> = {
-    peak: {
-        name: 'Peak',
-        description: 'Economy at maximum output. Growth is slowing, inflation rising.',
-        characteristics: ['Low unemployment', 'High inflation', 'Interest rates rising', 'Consumer confidence high'],
-        color: 'rgba(255, 180, 80, 1)',
-        policy: 'Fed may raise rates to cool inflation',
-    },
-    recession: {
-        name: 'Recession',
-        description: 'Economy contracting. Two consecutive quarters of negative GDP growth.',
-        characteristics: ['Rising unemployment', 'Falling GDP', 'Reduced consumer spending', 'Business failures'],
-        color: 'rgba(255, 100, 100, 1)',
-        policy: 'Expansionary fiscal/monetary policy',
-    },
-    trough: {
-        name: 'Trough',
-        description: 'Economy at lowest point. Conditions for recovery forming.',
-        characteristics: ['High unemployment', 'Low inflation/deflation', 'Low interest rates', 'Depressed asset prices'],
-        color: 'rgba(100, 150, 255, 1)',
-        policy: 'Aggressive stimulus measures',
-    },
-    expansion: {
-        name: 'Expansion',
-        description: 'Economy growing. GDP, employment, and incomes rising.',
-        characteristics: ['Declining unemployment', 'Moderate inflation', 'Rising consumer spending', 'Business investment up'],
-        color: 'rgba(100, 200, 150, 1)',
-        policy: 'Monitor for overheating; gradual rate normalization',
-    },
+    peak: { name: 'Peak', description: 'Economy at maximum output. Growth slowing, inflation rising.', characteristics: ['Low unemployment', 'High inflation', 'Rates rising', 'High confidence'], color: 'rgba(255, 180, 80, 1)', policy: 'Fed may raise rates to cool inflation' },
+    recession: { name: 'Recession', description: 'Economy contracting. Two quarters of negative GDP growth.', characteristics: ['Rising unemployment', 'Falling GDP', 'Reduced spending', 'Business failures'], color: 'rgba(255, 100, 100, 1)', policy: 'Expansionary fiscal/monetary policy' },
+    trough: { name: 'Trough', description: 'Economy at lowest point. Conditions for recovery forming.', characteristics: ['High unemployment', 'Low inflation', 'Low rates', 'Depressed prices'], color: 'rgba(100, 150, 255, 1)', policy: 'Aggressive stimulus measures' },
+    expansion: { name: 'Expansion', description: 'Economy growing. GDP, employment, and incomes rising.', characteristics: ['Declining unemployment', 'Moderate inflation', 'Rising spending', 'Investment up'], color: 'rgba(100, 200, 150, 1)', policy: 'Monitor for overheating' },
 }
 
 export default function BusinessCycle() {
@@ -49,25 +31,11 @@ export default function BusinessCycle() {
     const [isAnimating, setIsAnimating] = useState(true)
     const [speed, setSpeed] = useState(1)
     const [showIndicators, setShowIndicators] = useState(true)
-    const [showDemo, setShowDemo] = useState(false)
-    const [demoStep, setDemoStep] = useState(0)
 
-    // GDP growth (percent)
-    const getGDPGrowth = useCallback((t: number) => {
-        return 3 * Math.sin(t * 0.02) + 2
-    }, [])
+    const getGDPGrowth = useCallback((t: number) => 3 * Math.sin(t * 0.02) + 2, [])
+    const getUnemployment = useCallback((t: number) => 5 - 2 * Math.sin((t - 20) * 0.02), [])
+    const getInflation = useCallback((t: number) => 2 + 1.5 * Math.sin((t - 15) * 0.02), [])
 
-    // Unemployment rate (inverse of cycle with lag)
-    const getUnemployment = useCallback((t: number) => {
-        return 5 - 2 * Math.sin((t - 20) * 0.02)
-    }, [])
-
-    // Inflation rate (peaks during expansion, lags growth)
-    const getInflation = useCallback((t: number) => {
-        return 2 + 1.5 * Math.sin((t - 15) * 0.02)
-    }, [])
-
-    // Determine phase based on position in cycle
     const determinePhase = useCallback((t: number): Phase => {
         const cyclePos = (t * 0.02) % (2 * Math.PI)
         if (cyclePos < Math.PI / 2) return 'expansion'
@@ -76,221 +44,112 @@ export default function BusinessCycle() {
         return 'trough'
     }, [])
 
-    // Update phase based on animation
-    useEffect(() => {
-        setCurrentPhase(determinePhase(animationTime))
-    }, [animationTime, determinePhase])
+    useEffect(() => { setCurrentPhase(determinePhase(animationTime)) }, [animationTime, determinePhase])
 
     useEffect(() => {
         if (!isAnimating) return
-        const interval = setInterval(() => {
-            setAnimationTime(t => t + speed)
-        }, 50)
+        const interval = setInterval(() => setAnimationTime(t => t + speed), 50)
         return () => clearInterval(interval)
     }, [isAnimating, speed])
 
-    const demoSteps = [
-        {
-            title: 'The Business Cycle',
-            description: 'Economies naturally fluctuate through periods of growth and contraction. This cyclical pattern is called the business cycle.',
-            action: () => { setIsAnimating(true); setAnimationTime(0) },
-        },
-        {
-            title: 'Expansion Phase',
-            description: 'During expansion, GDP grows, unemployment falls, and consumer spending rises. This is the "good times" phase of the cycle.',
-            action: () => { setAnimationTime(10); setIsAnimating(false) },
-        },
-        {
-            title: 'Peak',
-            description: 'The peak is the highest point of economic activity. Growth slows, inflation pressures build, and the economy is "overheating."',
-            action: () => { setAnimationTime(80); setIsAnimating(false) },
-        },
-        {
-            title: 'Recession',
-            description: 'A recession is two consecutive quarters of declining GDP. Unemployment rises, spending falls, and businesses struggle.',
-            action: () => { setAnimationTime(130); setIsAnimating(false) },
-        },
-        {
-            title: 'Trough',
-            description: 'The trough is the lowest point. While painful, it sets the stage for recovery as prices reset and inventories clear.',
-            action: () => { setAnimationTime(210); setIsAnimating(false) },
-        },
-        {
-            title: 'Key Indicators',
-            description: 'Watch how GDP, unemployment, and inflation move together but with different timing (leads and lags). This helps predict turning points.',
-            action: () => { setShowIndicators(true); setIsAnimating(true); setAnimationTime(0) },
-        },
-    ]
+    const demoSteps: DemoStep[] = useMemo(() => [
+        { title: 'The Business Cycle', description: 'Economies naturally fluctuate through periods of growth and contraction.', setup: () => { setIsAnimating(true); setAnimationTime(0) } },
+        { title: 'Expansion Phase', description: 'GDP grows, unemployment falls, consumer spending rises. The "good times."', setup: () => { setAnimationTime(10); setIsAnimating(false) } },
+        { title: 'Peak', description: 'Highest point of activity. Growth slows, inflation pressures build, economy overheating.', setup: () => { setAnimationTime(80); setIsAnimating(false) } },
+        { title: 'Recession', description: 'Two consecutive quarters of declining GDP. Unemployment rises, spending falls.', setup: () => { setAnimationTime(130); setIsAnimating(false) } },
+        { title: 'Trough', description: 'The lowest point. While painful, sets the stage for recovery.', setup: () => { setAnimationTime(210); setIsAnimating(false) } },
+        { title: 'Key Indicators', description: 'GDP, unemployment, and inflation move together with different timing (leads and lags).', setup: () => { setShowIndicators(true); setIsAnimating(true); setAnimationTime(0) } },
+        { title: 'Policy Responses', description: 'Fiscal policy (G, T) and monetary policy (interest rates, money supply) counter the cycle.', setup: () => { setIsAnimating(true); setAnimationTime(0) } },
+        { title: 'Explore', description: 'Click phase buttons to jump. Adjust speed. Watch how indicators relate to each phase.', setup: () => { setIsAnimating(true); setAnimationTime(0) } },
+    ], [])
 
-    useEffect(() => {
-        if (showDemo) {
-            demoSteps[demoStep].action()
-        }
-    }, [showDemo, demoStep])
+    const demo = useDemoMode(demoSteps)
 
     useEffect(() => {
         const canvas = canvasRef.current
         if (!canvas) return
-
         const ctx = canvas.getContext('2d')
         if (!ctx) return
-
-        const resize = () => {
-            canvas.width = canvas.offsetWidth * window.devicePixelRatio
-            canvas.height = canvas.offsetHeight * window.devicePixelRatio
-            ctx.scale(window.devicePixelRatio, window.devicePixelRatio)
-        }
+        const resize = () => { canvas.width = canvas.offsetWidth * window.devicePixelRatio; canvas.height = canvas.offsetHeight * window.devicePixelRatio; ctx.scale(window.devicePixelRatio, window.devicePixelRatio) }
         resize()
         window.addEventListener('resize', resize)
+        const width = canvas.offsetWidth, height = canvas.offsetHeight
+        const pad = { left: 70, right: 30, top: 40, bottom: 80 }
+        const gW = width - pad.left - pad.right, gH = height - pad.top - pad.bottom
+        ctx.fillStyle = '#1a150a'; ctx.fillRect(0, 0, width, height)
 
-        const width = canvas.offsetWidth
-        const height = canvas.offsetHeight
-        const padding = { left: 70, right: 30, top: 40, bottom: 80 }
-        const graphWidth = width - padding.left - padding.right
-        const graphHeight = height - padding.top - padding.bottom
+        // Axes
+        ctx.strokeStyle = 'rgba(220,180,80,0.3)'; ctx.lineWidth = 1
+        ctx.beginPath(); ctx.moveTo(pad.left, pad.top); ctx.lineTo(pad.left, height - pad.bottom); ctx.lineTo(width - pad.right, height - pad.bottom); ctx.stroke()
+        ctx.fillStyle = 'rgba(220,180,80,0.6)'; ctx.font = '11px system-ui'; ctx.textAlign = 'right'
+        ctx.fillText('High', pad.left - 10, pad.top + 20); ctx.fillText('Low', pad.left - 10, height - pad.bottom - 10)
+        ctx.textAlign = 'center'; ctx.fillText('Time', width / 2, height - 20)
 
-        ctx.fillStyle = '#1a150a'
-        ctx.fillRect(0, 0, width, height)
+        // Potential GDP
+        ctx.strokeStyle = 'rgba(255,255,255,0.3)'; ctx.lineWidth = 2; ctx.setLineDash([8, 4])
+        const potY = pad.top + gH * 0.4
+        ctx.beginPath(); ctx.moveTo(pad.left, potY); ctx.lineTo(width - pad.right, potY); ctx.stroke(); ctx.setLineDash([])
+        ctx.fillStyle = 'rgba(255,255,255,0.5)'; ctx.font = '11px system-ui'; ctx.textAlign = 'left'
+        ctx.fillText('Potential GDP (Y*)', pad.left + 10, potY - 8)
 
-        // Draw graph area
-        ctx.strokeStyle = 'rgba(220, 180, 80, 0.3)'
-        ctx.lineWidth = 1
-        ctx.beginPath()
-        ctx.moveTo(padding.left, padding.top)
-        ctx.lineTo(padding.left, height - padding.bottom)
-        ctx.lineTo(width - padding.right, height - padding.bottom)
-        ctx.stroke()
-
-        // Y-axis labels
-        ctx.fillStyle = 'rgba(220, 180, 80, 0.6)'
-        ctx.font = '11px system-ui'
-        ctx.textAlign = 'right'
-        ctx.fillText('High', padding.left - 10, padding.top + 20)
-        ctx.fillText('Low', padding.left - 10, height - padding.bottom - 10)
-
-        // X-axis label
-        ctx.textAlign = 'center'
-        ctx.fillText('Time', width / 2, height - 20)
-
-        // Potential GDP line
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)'
-        ctx.lineWidth = 2
-        ctx.setLineDash([8, 4])
-        ctx.beginPath()
-        const potentialY = padding.top + graphHeight * 0.4
-        ctx.moveTo(padding.left, potentialY)
-        ctx.lineTo(width - padding.right, potentialY)
-        ctx.stroke()
-        ctx.setLineDash([])
-
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.5)'
-        ctx.font = '11px system-ui'
-        ctx.textAlign = 'left'
-        ctx.fillText('Potential GDP (Y*)', padding.left + 10, potentialY - 8)
-
-        // Draw cycle curve
-        const cycleLength = 320
-        const visibleStart = Math.max(0, animationTime - cycleLength)
+        const cycleLen = 320, visStart = Math.max(0, animationTime - cycleLen)
 
         // Phase shading
-        for (let t = visibleStart; t < animationTime - 1; t += 1) {
+        for (let t = visStart; t < animationTime - 1; t += 1) {
             const phase = determinePhase(t)
             const info = phaseInfo[phase]
-            const x = padding.left + ((t - visibleStart) / cycleLength) * graphWidth
+            const x = pad.left + ((t - visStart) / cycleLen) * gW
             ctx.fillStyle = info.color.replace('1)', '0.05)')
-            ctx.fillRect(x, padding.top, 3, graphHeight)
+            ctx.fillRect(x, pad.top, 3, gH)
         }
 
         // GDP curve
-        ctx.strokeStyle = 'rgba(220, 180, 80, 0.9)'
-        ctx.lineWidth = 3
-        ctx.lineCap = 'round'
-        ctx.beginPath()
-        for (let t = visibleStart; t <= animationTime; t += 1) {
-            const x = padding.left + ((t - visibleStart) / cycleLength) * graphWidth
-            const gdp = getGDPGrowth(t)
-            const y = padding.top + (1 - (gdp / 10)) * graphHeight
-
-            if (t === visibleStart) ctx.moveTo(x, y)
-            else ctx.lineTo(x, y)
+        ctx.strokeStyle = 'rgba(220,180,80,0.9)'; ctx.lineWidth = 3; ctx.lineCap = 'round'; ctx.beginPath()
+        for (let t = visStart; t <= animationTime; t += 1) {
+            const x = pad.left + ((t - visStart) / cycleLen) * gW
+            const gdpVal = getGDPGrowth(t)
+            const y = pad.top + (1 - (gdpVal / 10)) * gH
+            if (t === visStart) ctx.moveTo(x, y); else ctx.lineTo(x, y)
         }
         ctx.stroke()
 
         // Current point
-        const currentX = width - padding.right
-        const currentGDP = getGDPGrowth(animationTime)
-        const currentY = padding.top + (1 - (currentGDP / 10)) * graphHeight
+        const curX = width - pad.right
+        const curGDP = getGDPGrowth(animationTime)
+        const curY = pad.top + (1 - (curGDP / 10)) * gH
+        const glow = ctx.createRadialGradient(curX, curY, 0, curX, curY, 20)
+        glow.addColorStop(0, phaseInfo[currentPhase].color.replace('1)', '0.5)')); glow.addColorStop(1, 'transparent')
+        ctx.fillStyle = glow; ctx.beginPath(); ctx.arc(curX, curY, 20, 0, Math.PI * 2); ctx.fill()
+        ctx.fillStyle = phaseInfo[currentPhase].color; ctx.beginPath(); ctx.arc(curX, curY, 8, 0, Math.PI * 2); ctx.fill()
 
-        const glow = ctx.createRadialGradient(currentX, currentY, 0, currentX, currentY, 20)
-        glow.addColorStop(0, phaseInfo[currentPhase].color.replace('1)', '0.5)'))
-        glow.addColorStop(1, 'transparent')
-        ctx.fillStyle = glow
-        ctx.beginPath()
-        ctx.arc(currentX, currentY, 20, 0, Math.PI * 2)
-        ctx.fill()
-
-        ctx.fillStyle = phaseInfo[currentPhase].color
-        ctx.beginPath()
-        ctx.arc(currentX, currentY, 8, 0, Math.PI * 2)
-        ctx.fill()
-
-        // Indicator curves (smaller, in bottom section)
+        // Indicators
         if (showIndicators) {
-            const indicatorHeight = 50
-            const indicatorBase = height - padding.bottom + 25
-
-            // Unemployment (red, inverted)
-            ctx.strokeStyle = 'rgba(255, 100, 100, 0.6)'
-            ctx.lineWidth = 2
-            ctx.beginPath()
-            for (let t = visibleStart; t <= animationTime; t += 2) {
-                const x = padding.left + ((t - visibleStart) / cycleLength) * graphWidth
-                const u = getUnemployment(t)
-                const y = indicatorBase - ((u - 3) / 4) * indicatorHeight
-
-                if (t === visibleStart) ctx.moveTo(x, y)
-                else ctx.lineTo(x, y)
+            const iH = 50, iBase = height - pad.bottom + 25
+            ctx.strokeStyle = 'rgba(255,100,100,0.6)'; ctx.lineWidth = 2; ctx.beginPath()
+            for (let t = visStart; t <= animationTime; t += 2) {
+                const x = pad.left + ((t - visStart) / cycleLen) * gW
+                const u = getUnemployment(t), y = iBase - ((u - 3) / 4) * iH
+                if (t === visStart) ctx.moveTo(x, y); else ctx.lineTo(x, y)
             }
             ctx.stroke()
-
-            // Inflation (purple)
-            ctx.strokeStyle = 'rgba(150, 100, 255, 0.6)'
-            ctx.lineWidth = 2
-            ctx.beginPath()
-            for (let t = visibleStart; t <= animationTime; t += 2) {
-                const x = padding.left + ((t - visibleStart) / cycleLength) * graphWidth
-                const inf = getInflation(t)
-                const y = indicatorBase - ((inf) / 5) * indicatorHeight
-
-                if (t === visibleStart) ctx.moveTo(x, y)
-                else ctx.lineTo(x, y)
+            ctx.strokeStyle = 'rgba(150,100,255,0.6)'; ctx.lineWidth = 2; ctx.beginPath()
+            for (let t = visStart; t <= animationTime; t += 2) {
+                const x = pad.left + ((t - visStart) / cycleLen) * gW
+                const inf = getInflation(t), y = iBase - ((inf) / 5) * iH
+                if (t === visStart) ctx.moveTo(x, y); else ctx.lineTo(x, y)
             }
             ctx.stroke()
-
-            // Legend
-            ctx.font = '10px system-ui'
-            ctx.textAlign = 'left'
-
-            ctx.fillStyle = 'rgba(220, 180, 80, 0.8)'
-            ctx.fillText('GDP', padding.left + 20, indicatorBase + 20)
-
-            ctx.fillStyle = 'rgba(255, 100, 100, 0.8)'
-            ctx.fillText('Unemployment', padding.left + 60, indicatorBase + 20)
-
-            ctx.fillStyle = 'rgba(150, 100, 255, 0.8)'
-            ctx.fillText('Inflation', padding.left + 160, indicatorBase + 20)
+            ctx.font = '10px system-ui'; ctx.textAlign = 'left'
+            ctx.fillStyle = 'rgba(220,180,80,0.8)'; ctx.fillText('GDP', pad.left + 20, iBase + 20)
+            ctx.fillStyle = 'rgba(255,100,100,0.8)'; ctx.fillText('Unemployment', pad.left + 60, iBase + 20)
+            ctx.fillStyle = 'rgba(150,100,255,0.8)'; ctx.fillText('Inflation', pad.left + 160, iBase + 20)
         }
 
-        // Phase label with background
+        // Phase label
         ctx.fillStyle = phaseInfo[currentPhase].color.replace('1)', '0.2)')
-        ctx.beginPath()
-        ctx.roundRect(width - padding.right - 100, padding.top + 10, 90, 28, 6)
-        ctx.fill()
-
-        ctx.fillStyle = phaseInfo[currentPhase].color
-        ctx.font = 'bold 14px system-ui'
-        ctx.textAlign = 'center'
-        ctx.fillText(phaseInfo[currentPhase].name, width - padding.right - 55, padding.top + 29)
+        ctx.beginPath(); ctx.roundRect(width - pad.right - 100, pad.top + 10, 90, 28, 6); ctx.fill()
+        ctx.fillStyle = phaseInfo[currentPhase].color; ctx.font = 'bold 14px system-ui'; ctx.textAlign = 'center'
+        ctx.fillText(phaseInfo[currentPhase].name, width - pad.right - 55, pad.top + 29)
 
         return () => window.removeEventListener('resize', resize)
     }, [animationTime, currentPhase, showIndicators, determinePhase, getGDPGrowth, getUnemployment, getInflation])
@@ -305,201 +164,50 @@ export default function BusinessCycle() {
             <div className="flex-1 relative">
                 <canvas ref={canvasRef} className="w-full h-full" />
 
-                {/* Info panel */}
-                <motion.div
-                    initial={{ opacity: 0, x: 20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    className="absolute top-4 right-4 bg-black/40 backdrop-blur-md rounded-xl p-4 border border-white/10 max-w-xs"
-                >
-                    <div className="flex items-center justify-between mb-3">
-                        <span className="text-sm font-medium" style={{ color: phase.color }}>
-                            {phase.name}
-                        </span>
-                        <button
-                            onClick={() => { setShowDemo(true); setDemoStep(0) }}
-                            className="text-xs px-2 py-1 rounded-lg bg-yellow-500/20 text-yellow-400 hover:bg-yellow-500/30 transition-colors"
-                        >
-                            Learn
-                        </button>
-                    </div>
-
-                    <p className="text-xs text-white/60 mb-3">{phase.description}</p>
-
-                    <div className="grid grid-cols-3 gap-3 text-xs mb-3">
-                        <div>
-                            <div className="text-white/40">GDP</div>
-                            <div className={`font-mono ${gdpGrowth >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                                {gdpGrowth >= 0 ? '+' : ''}{gdpGrowth.toFixed(1)}%
-                            </div>
-                        </div>
-                        <div>
-                            <div className="text-white/40">Unemployment</div>
-                            <div className="font-mono text-orange-400">{unemployment.toFixed(1)}%</div>
-                        </div>
-                        <div>
-                            <div className="text-white/40">Inflation</div>
-                            <div className="font-mono text-purple-400">{inflation.toFixed(1)}%</div>
-                        </div>
-                    </div>
-
-                    <div className="text-xs text-white/40 border-t border-white/10 pt-2">
-                        <div className="text-white/60 mb-1">Policy Response:</div>
-                        <div className="text-white/80">{phase.policy}</div>
-                    </div>
-                </motion.div>
-
-                {/* Phase selector */}
-                <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    className="absolute top-4 left-4 flex gap-2 flex-wrap"
-                >
-                    {(Object.keys(phaseInfo) as Phase[]).map(p => (
-                        <button
-                            key={p}
-                            onClick={() => {
-                                setIsAnimating(false)
-                                const phases: Phase[] = ['expansion', 'peak', 'recession', 'trough']
-                                const phaseIndex = phases.indexOf(p)
-                                setAnimationTime(10 + phaseIndex * 78)
-                            }}
-                            className={`px-3 py-1.5 rounded-lg text-xs transition-all ${currentPhase === p
-                                ? 'border text-white'
-                                : 'text-white/50 hover:text-white bg-black/30 border border-white/10'
-                                }`}
-                            style={{
-                                backgroundColor: currentPhase === p ? phaseInfo[p].color.replace('1)', '0.2)') : undefined,
-                                borderColor: currentPhase === p ? phaseInfo[p].color : undefined,
-                                color: currentPhase === p ? phaseInfo[p].color : undefined,
-                            }}
-                        >
-                            {phaseInfo[p].name}
-                        </button>
-                    ))}
-                </motion.div>
-            </div>
-
-            {/* Controls */}
-            <div className="border-t border-white/10 bg-black/30 backdrop-blur-sm px-6 py-4">
-                <div className="max-w-4xl mx-auto flex items-center justify-between gap-6">
-                    <label className="flex items-center gap-2 text-sm text-white/60 cursor-pointer">
-                        <input
-                            type="checkbox"
-                            checked={showIndicators}
-                            onChange={e => setShowIndicators(e.target.checked)}
-                            className="accent-yellow-400"
-                        />
-                        Show Indicators
-                    </label>
-
-                    <div className="flex items-center gap-4">
-                        <div className="flex items-center gap-3">
-                            <span className="text-white/50 text-sm">Speed</span>
-                            <input
-                                type="range"
-                                min={0.2}
-                                max={3}
-                                step={0.2}
-                                value={speed}
-                                onChange={e => setSpeed(+e.target.value)}
-                                className="w-24 accent-yellow-400"
-                            />
-                            <span className="text-yellow-400 text-sm font-mono w-8">{speed}x</span>
-                        </div>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                        <button
-                            onClick={() => setIsAnimating(!isAnimating)}
-                            className="px-4 py-1.5 rounded-lg text-sm bg-yellow-500/20 text-yellow-400 hover:bg-yellow-500/30 transition-colors"
-                        >
-                            {isAnimating ? 'Pause' : 'Play'}
-                        </button>
-                        <button
-                            onClick={() => { setAnimationTime(0); setIsAnimating(true) }}
-                            className="px-3 py-1.5 rounded-lg text-sm bg-white/5 text-white/70 hover:bg-white/10 hover:text-white transition-colors border border-white/10"
-                        >
-                            Reset
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            {/* Demo Modal */}
-            <AnimatePresence>
-                {showDemo && (
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="absolute inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4"
-                        onClick={() => setShowDemo(false)}
-                    >
-                        <motion.div
-                            initial={{ scale: 0.9, opacity: 0 }}
-                            animate={{ scale: 1, opacity: 1 }}
-                            exit={{ scale: 0.9, opacity: 0 }}
-                            className="bg-[#1a150a] border border-white/20 rounded-2xl p-6 max-w-md w-full shadow-2xl"
-                            onClick={e => e.stopPropagation()}
-                        >
-                            <div className="flex items-center justify-between mb-4">
-                                <span className="text-xs text-white/40">
-                                    {demoStep + 1} of {demoSteps.length}
-                                </span>
-                                <button
-                                    onClick={() => setShowDemo(false)}
-                                    className="text-white/40 hover:text-white text-xl"
-                                >
-                                    ×
-                                </button>
-                            </div>
-
-                            <h3 className="text-xl font-semibold text-yellow-400 mb-3">
-                                {demoSteps[demoStep].title}
-                            </h3>
-                            <p className="text-white/70 mb-6 leading-relaxed">
-                                {demoSteps[demoStep].description}
-                            </p>
-
-                            <div className="flex justify-center gap-2 mb-6">
-                                {demoSteps.map((_, i) => (
-                                    <button
-                                        key={i}
-                                        onClick={() => setDemoStep(i)}
-                                        className={`w-2 h-2 rounded-full transition-colors ${i === demoStep ? 'bg-yellow-400' : 'bg-white/20 hover:bg-white/40'
-                                            }`}
-                                    />
+                <div className="absolute top-4 left-4 space-y-3 max-w-[260px]">
+                    <ControlPanel>
+                        <ControlGroup label="Jump to Phase">
+                            <div className="flex flex-wrap gap-1">
+                                {(Object.keys(phaseInfo) as Phase[]).map(p => (
+                                    <button key={p} onClick={() => { setIsAnimating(false); const phases: Phase[] = ['expansion', 'peak', 'recession', 'trough']; setAnimationTime(10 + phases.indexOf(p) * 78) }}
+                                        className="px-2 py-1 rounded text-xs transition-all" style={{ backgroundColor: currentPhase === p ? phaseInfo[p].color.replace('1)', '0.2)') : 'rgba(255,255,255,0.05)', color: currentPhase === p ? phaseInfo[p].color : 'rgba(255,255,255,0.5)', border: `1px solid ${currentPhase === p ? phaseInfo[p].color : 'rgba(255,255,255,0.1)'}` }}>
+                                        {phaseInfo[p].name}
+                                    </button>
                                 ))}
                             </div>
+                        </ControlGroup>
+                        <Toggle label="Show Indicators" value={showIndicators} onChange={setShowIndicators} />
+                        <Slider label="Speed" value={speed} onChange={setSpeed} min={0.2} max={3} step={0.2} />
+                        <div className="flex gap-2">
+                            <Button onClick={() => setIsAnimating(!isAnimating)}>{isAnimating ? 'Pause' : 'Play'}</Button>
+                            <Button onClick={() => { setAnimationTime(0); setIsAnimating(true) }} variant="secondary">Reset</Button>
+                            <Button onClick={demo.open} variant="secondary">Tutorial</Button>
+                        </div>
+                    </ControlPanel>
+                    <APTag course="Macroeconomics" unit="Unit 2" color={GOLD} />
+                </div>
 
-                            <div className="flex justify-between gap-3">
-                                <button
-                                    onClick={() => setDemoStep(Math.max(0, demoStep - 1))}
-                                    disabled={demoStep === 0}
-                                    className="px-4 py-2 rounded-lg bg-white/5 text-white/70 hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-                                >
-                                    ← Previous
-                                </button>
-                                {demoStep < demoSteps.length - 1 ? (
-                                    <button
-                                        onClick={() => setDemoStep(demoStep + 1)}
-                                        className="px-4 py-2 rounded-lg bg-yellow-500/20 text-yellow-400 hover:bg-yellow-500/30 transition-colors"
-                                    >
-                                        Next →
-                                    </button>
-                                ) : (
-                                    <button
-                                        onClick={() => setShowDemo(false)}
-                                        className="px-4 py-2 rounded-lg bg-green-500/20 text-green-400 hover:bg-green-500/30 transition-colors"
-                                    >
-                                        Done ✓
-                                    </button>
-                                )}
-                            </div>
-                        </motion.div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
+                <div className="absolute top-4 right-4 space-y-3 max-w-[240px]">
+                    <InfoPanel departmentColor={phase.color} title={phase.name} items={[
+                        { label: 'GDP Growth', value: `${gdpGrowth >= 0 ? '+' : ''}${gdpGrowth.toFixed(1)}%`, color: gdpGrowth >= 0 ? 'rgba(100,200,150,1)' : 'rgba(255,100,100,1)' },
+                        { label: 'Unemployment', value: `${unemployment.toFixed(1)}%`, color: 'rgba(255,150,100,1)' },
+                        { label: 'Inflation', value: `${inflation.toFixed(1)}%`, color: 'rgba(150,100,255,1)' },
+                    ]} />
+                    <div className="backdrop-blur-xl bg-black/40 border border-white/10 rounded-xl px-4 py-3">
+                        <p className="text-xs text-white/60 mb-2">{phase.description}</p>
+                        <p className="text-xs text-white/40">Policy: {phase.policy}</p>
+                    </div>
+                    <EquationDisplay departmentColor={GOLD} title="Key Concepts" collapsed equations={[
+                        { label: 'GDP', expression: 'Y = C + I + G + NX' },
+                        { label: 'Recession', expression: '2 consecutive quarters of negative GDP growth' },
+                        { label: 'Okun', expression: 'Each 1% above NRU = 2% output gap' },
+                    ]} />
+                </div>
+
+                <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-40">
+                    <DemoMode steps={demoSteps} currentStep={demo.currentStep} isOpen={demo.isOpen} onClose={demo.close} onNext={demo.next} onPrev={demo.prev} onGoToStep={demo.goToStep} departmentColor={GOLD} />
+                </div>
+            </div>
         </div>
     )
 }

@@ -27,7 +27,7 @@ const Matrix = lazy(() => import('@/pages/math/matrix'))
 const FibonacciSpiral = lazy(() => import('@/pages/math/fibonacci-spiral'))
 const UnitCircle = lazy(() => import('@/pages/math/unit-circle'))
 const Conics = lazy(() => import('@/pages/math/conics'))
-// const Vectors = lazy(() => import('@/pages/math/vectors'))
+const Vectors = lazy(() => import('@/pages/math/vectors'))
 
 // Physics
 const PhysicsHub = lazy(() => import('@/pages/physics/ap-hub'))
@@ -157,7 +157,7 @@ export default function App() {
                             <Route path="/math/fibonacci" element={<FibonacciSpiral />} />
                             <Route path="/math/unit-circle" element={<UnitCircle />} />
                             <Route path="/math/conics" element={<Conics />} />
-                            {/* <Route path="/math/vectors" element={<Vectors />} /> */}
+                            <Route path="/math/vectors" element={<Vectors />} />
 
                             {/* Physics Hub */}
                             <Route path="/physics" element={<PhysicsHub />} />
