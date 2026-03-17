@@ -12,7 +12,7 @@ export default function Layout({ children }: LayoutProps) {
     const segments = location.pathname.split('/').filter(Boolean)
     const isSubjectHub = segments.length === 1
     const parentPath = isSubjectHub ? '/' : `/${segments[0]}`
-    const parentLabel = isSubjectHub ? 'Home' : segments[0].charAt(0).toUpperCase() + segments[0].slice(1)
+    const parentLabel = isSubjectHub ? 'Home' : segments[0] ? segments[0].charAt(0).toUpperCase() + segments[0].slice(1) : 'Home'
 
     return (
         <div className="min-h-screen bg-bg">
