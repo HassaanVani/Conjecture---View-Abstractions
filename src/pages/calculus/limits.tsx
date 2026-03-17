@@ -450,7 +450,7 @@ export default function LimitsVisualization() {
     return (
         <div className="h-[calc(100vh-64px)] flex flex-col bg-[#120a1a]">
             {/* Top bar */}
-            <div className="flex items-center justify-between px-4 py-2 border-b border-white/10 bg-black/30 backdrop-blur-sm">
+            <div className="flex items-center justify-between px-4 py-2 border-b border-white/10 bg-bg-elevated">
                 <div className="flex items-center gap-3">
                     <Link to="/calculus" className="p-1.5 rounded-lg hover:bg-white/10 transition-colors">
                         <svg className="w-4 h-4 text-white/50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -517,8 +517,8 @@ export default function LimitsVisualization() {
                 </div>
 
                 {/* Right sidebar controls */}
-                <div className="w-72 bg-black/30 border-l border-white/10 backdrop-blur-sm p-4 flex flex-col gap-4 overflow-y-auto">
-                    <ControlPanel className="!p-0 !bg-transparent !border-0 !backdrop-blur-0">
+                <div className="w-72 bg-black/30 border-l border-white/10 p-4 flex flex-col gap-4 overflow-y-auto">
+                    <ControlPanel className="!p-0 !bg-transparent !border-0">
                         <Select
                             label="Function"
                             value={funcId}

@@ -1,6 +1,7 @@
 import { motion, AnimatePresence } from 'framer-motion'
 import { useState } from 'react'
 import { cn } from '@/lib/utils'
+import { ChevronDownIcon } from '@/components/icons'
 
 interface Equation {
     label: string
@@ -30,25 +31,17 @@ export function EquationDisplay({
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3, delay: 0.3 }}
-            className={cn('glass-subtle overflow-hidden', className)}
+            className={cn('bg-bg-elevated rounded-[--radius-lg] shadow-[--shadow-sm] overflow-hidden', className)}
         >
             <button
                 onClick={() => setCollapsed(!collapsed)}
-                className="w-full px-4 py-2.5 flex items-center justify-between text-xs font-semibold tracking-wider uppercase hover:bg-white/5 transition-colors"
+                className="w-full px-4 py-2.5 flex items-center justify-between text-xs font-semibold tracking-wider uppercase hover:bg-bg-tertiary/50 transition-colors"
                 style={{ color: departmentColor }}
             >
-                <span className="flex items-center gap-2">
-                    <span className="opacity-50 font-normal">f(x)</span>
-                    {title}
-                </span>
-                <svg
+                <span>{title}</span>
+                <ChevronDownIcon
                     className={`w-3.5 h-3.5 transition-transform duration-200 ${collapsed ? '' : 'rotate-180'}`}
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                >
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                </svg>
+                />
             </button>
 
             <AnimatePresence>

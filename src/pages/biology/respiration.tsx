@@ -445,7 +445,7 @@ export default function Respiration() {
         </div>
       </div>
 
-      <div className="border-t border-white/10 bg-black/30 backdrop-blur-sm px-6 py-4">
+      <div className="border-t border-white/10 bg-bg-elevated px-6 py-4">
         <div className="max-w-5xl mx-auto flex flex-wrap items-center justify-between gap-4">
           <div className="w-32">
             <Slider value={glucoseInput} onChange={setGlucoseInput} min={1} max={5} step={1} label="Glucose" />

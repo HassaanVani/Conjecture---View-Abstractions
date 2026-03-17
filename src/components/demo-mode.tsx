@@ -1,6 +1,7 @@
 import { motion, AnimatePresence } from 'framer-motion'
 import { useState } from 'react'
 import { cn } from '@/lib/utils'
+import { XIcon } from '@/components/icons'
 
 export interface DemoStep {
     title: string
@@ -32,7 +33,7 @@ export function DemoMode({
     onGoToStep,
     departmentColor = 'rgb(160, 100, 255)',
     className,
-    title = 'AP Tutorial',
+    title = 'Tutorial',
 }: DemoModeProps) {
     if (!isOpen) return null
 
@@ -43,12 +44,12 @@ export function DemoMode({
     return (
         <AnimatePresence>
             <motion.div
-                initial={{ opacity: 0, y: 20, scale: 0.96 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: 20, scale: 0.96 }}
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 16 }}
                 transition={{ duration: 0.25 }}
                 className={cn(
-                    'glass max-w-md w-full shadow-2xl shadow-black/30',
+                    'bg-bg-elevated rounded-[--radius-lg] shadow-[--shadow-lg] max-w-md w-full',
                     className
                 )}
             >
@@ -56,11 +57,8 @@ export function DemoMode({
                 <div className="flex items-center justify-between px-5 pt-4 pb-3">
                     <div className="flex items-center gap-2">
                         <span
-                            className="text-[10px] font-semibold px-2 py-0.5 rounded-md tracking-wider uppercase"
-                            style={{
-                                backgroundColor: `color-mix(in srgb, ${departmentColor} 15%, transparent)`,
-                                color: departmentColor,
-                            }}
+                            className="text-[10px] font-semibold px-2 py-0.5 rounded-[--radius-sm] tracking-wider uppercase bg-bg-tertiary"
+                            style={{ color: departmentColor }}
                         >
                             {title}
                         </span>
@@ -70,12 +68,10 @@ export function DemoMode({
                     </div>
                     <button
                         onClick={onClose}
-                        className="text-text-dim hover:text-text-secondary transition-colors p-1 rounded-md hover:bg-white/5"
+                        className="text-text-dim hover:text-text-secondary transition-colors p-1 rounded-[--radius-sm] hover:bg-bg-tertiary"
                         aria-label="Close tutorial"
                     >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                        </svg>
+                        <XIcon className="w-4 h-4" />
                     </button>
                 </div>
 
@@ -87,7 +83,7 @@ export function DemoMode({
                             onClick={() => onGoToStep(i)}
                             className="flex-1 h-1 rounded-full transition-colors cursor-pointer hover:opacity-80"
                             style={{
-                                backgroundColor: i <= currentStep ? departmentColor : 'rgba(255,255,255,0.08)',
+                                backgroundColor: i <= currentStep ? departmentColor : 'rgba(255,255,255,0.06)',
                             }}
                             aria-label={`Go to step ${i + 1}`}
                         />
@@ -104,7 +100,7 @@ export function DemoMode({
                             exit={{ opacity: 0, x: -8 }}
                             transition={{ duration: 0.15 }}
                         >
-                            <h3 className="text-base font-medium text-white mb-1.5">{step.title}</h3>
+                            <h3 className="text-base font-medium text-text mb-1.5">{step.title}</h3>
                             <p className="text-text-secondary text-sm leading-relaxed">{step.description}</p>
                             {step.highlight && (
                                 <p className="mt-2 text-[11px] italic" style={{ color: departmentColor }}>
@@ -121,10 +117,10 @@ export function DemoMode({
                         onClick={onPrev}
                         disabled={isFirst}
                         className={cn(
-                            'px-4 py-1.5 rounded-lg text-sm font-medium transition-all',
+                            'px-4 py-1.5 rounded-[--radius-md] text-sm font-medium transition-all',
                             isFirst
                                 ? 'text-text-dim cursor-not-allowed'
-                                : 'text-text-muted hover:text-text hover:bg-white/5'
+                                : 'text-text-muted hover:text-text hover:bg-bg-tertiary'
                         )}
                     >
                         Prev
@@ -132,11 +128,8 @@ export function DemoMode({
 
                     <button
                         onClick={isLast ? onClose : onNext}
-                        className="px-5 py-1.5 rounded-lg text-sm font-medium transition-all"
-                        style={{
-                            backgroundColor: `color-mix(in srgb, ${departmentColor} 20%, transparent)`,
-                            color: departmentColor,
-                        }}
+                        className="btn-secondary px-5 py-1.5 text-sm"
+                        style={{ color: departmentColor }}
                     >
                         {isLast ? 'Finish' : 'Next'}
                     </button>

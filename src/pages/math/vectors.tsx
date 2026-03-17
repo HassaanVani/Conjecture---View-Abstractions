@@ -412,7 +412,7 @@ export default function Vectors() {
   return (
     <div className="h-[calc(100vh-64px)] flex flex-col bg-[#0a0e1a]">
       {/* Top bar */}
-      <div className="flex items-center justify-between px-4 py-2 border-b border-white/10 bg-black/30 backdrop-blur-sm">
+      <div className="flex items-center justify-between px-4 py-2 border-b border-white/10 bg-bg-elevated">
         <div className="flex items-center gap-3">
           <Link to="/" className="p-1.5 rounded-lg hover:bg-white/10 transition-colors">
             <svg className="w-4 h-4 text-white/50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -462,8 +462,8 @@ export default function Vectors() {
         </div>
 
         {/* Right sidebar */}
-        <div className="w-72 bg-black/30 border-l border-white/10 backdrop-blur-sm p-4 flex flex-col gap-4 overflow-y-auto">
-          <ControlPanel className="!p-0 !bg-transparent !border-0 !backdrop-blur-0">
+        <div className="w-72 bg-black/30 border-l border-white/10 p-4 flex flex-col gap-4 overflow-y-auto">
+          <ControlPanel className="!p-0 !bg-transparent !border-0">
             <ButtonGroup
               label="Operation"
               value={operation}
@@ -513,7 +513,7 @@ export default function Vectors() {
             </div>
           )}
 
-          <ControlPanel className="!p-0 !bg-transparent !border-0 !backdrop-blur-0">
+          <ControlPanel className="!p-0 !bg-transparent !border-0">
             <Toggle label="Show Components" value={showComponents} onChange={setShowComponents} />
             <Toggle label="Show Angle" value={showAngle} onChange={setShowAngle} />
           </ControlPanel>

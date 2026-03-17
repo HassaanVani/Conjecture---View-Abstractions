@@ -265,7 +265,7 @@ export default function RiemannSums() {
             <div className="absolute inset-0 pointer-events-none"><CalculusBackground /></div>
 
             {/* Navbar */}
-            <div className="relative z-10 flex items-center justify-between px-6 py-3 border-b border-white/10 bg-[#120a1a]/80 backdrop-blur-md">
+            <div className="relative z-10 flex items-center justify-between px-6 py-3 border-b border-white/10 bg-[#120a1a]/80">
                 <div className="flex items-center gap-4">
                     <Link to="/calculus" className="p-2 rounded-full hover:bg-white/10 transition-colors">
                         <svg className="w-5 h-5 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -310,7 +310,7 @@ export default function RiemannSums() {
 
                 {/* Controls */}
                 <div className="w-72 bg-[#120a1a]/90 border-l border-white/10 p-5 flex flex-col gap-4 overflow-y-auto no-scrollbar z-20">
-                    <ControlPanel className="!p-0 !bg-transparent !backdrop-blur-none !border-none">
+                    <ControlPanel className="!p-0 !bg-transparent !border-none">
                         <Select label="Function" value={funcKey} onChange={v => setFuncKey(v as FuncKey)}
                             options={Object.entries(FUNCS).map(([k, d]) => ({ value: k, label: d.label }))} />
                         <ButtonGroup label="Method" value={method} onChange={v => setMethod(v as Method)} color={ACCENT}

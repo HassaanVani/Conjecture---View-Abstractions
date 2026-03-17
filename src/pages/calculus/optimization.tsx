@@ -477,7 +477,7 @@ export default function Optimization() {
                 </div>
             </div>
 
-            <div className="border-t border-white/10 bg-black/30 backdrop-blur-sm px-6 py-4">
+            <div className="border-t border-white/10 bg-bg-elevated px-6 py-4">
                 <div className="max-w-5xl mx-auto flex flex-wrap items-center gap-6">
                     <Select
                         value={scenario}

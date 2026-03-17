@@ -168,7 +168,7 @@ export default function AggregateSupplyDemand() {
                         { label: 'GDP Gap', value: outputGap > 4 ? `+${outputGap.toFixed(0)}` : outputGap < -4 ? `${outputGap.toFixed(0)}` : '0', color: outputGap > 4 ? 'rgba(255,150,100,1)' : outputGap < -4 ? 'rgba(100,150,255,1)' : 'rgba(80,200,120,1)' },
                         { label: 'Gap Type', value: outputGap > 4 ? 'Inflationary' : outputGap < -4 ? 'Recessionary' : 'None', color: outputGap > 4 ? 'rgba(255,150,100,1)' : outputGap < -4 ? 'rgba(100,150,255,1)' : 'rgba(80,200,120,1)' },
                     ]} />
-                    <div className="backdrop-blur-xl bg-black/40 border border-white/10 rounded-xl px-4 py-3">
+                    <div className="bg-bg-elevated border border-white/10 rounded-xl px-4 py-3">
                         <p className="text-xs text-white/60 mb-1">{currentScenario.description}</p>
                         <p className="text-xs text-green-400">Policy: {currentScenario.policy}</p>
                     </div>

@@ -371,7 +371,7 @@ export default function GameTheory() {
                             { label: "B's Dominant", value: dominant.b || 'None', color: 'rgba(255, 150, 100, 1)' },
                         ]}
                     />
-                    <div className="backdrop-blur-xl bg-black/40 border border-white/10 rounded-xl px-4 py-3">
+                    <div className="bg-bg-elevated border border-white/10 rounded-xl px-4 py-3">
                         <p className="text-xs text-white/60 leading-relaxed">{presetInfo.description}</p>
                         <p className="text-xs text-white/40 mt-1 italic">{presetInfo.realWorld}</p>
                     </div>

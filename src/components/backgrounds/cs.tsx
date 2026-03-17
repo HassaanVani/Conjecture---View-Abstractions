@@ -28,7 +28,7 @@ export function CSBackground({ className = '' }: BackgroundProps) {
         const animate = () => {
             frame++
 
-            ctx.fillStyle = 'rgba(10, 21, 24, 0.05)'
+            ctx.fillStyle = 'rgba(29, 29, 31, 0.05)'
             ctx.fillRect(0, 0, canvas.width, canvas.height)
 
             ctx.font = '14px monospace'
@@ -38,7 +38,7 @@ export function CSBackground({ className = '' }: BackgroundProps) {
                 const x = i * 25
                 const y = drops[i] * 20
 
-                const alpha = 0.15 + Math.random() * 0.1
+                const alpha = 0.03 + Math.random() * 0.01
                 ctx.fillStyle = `rgba(80, 200, 220, ${alpha})`
                 ctx.fillText(char, x, y)
 
@@ -49,7 +49,7 @@ export function CSBackground({ className = '' }: BackgroundProps) {
             }
 
             if (frame % 3 === 0) {
-                ctx.strokeStyle = 'rgba(80, 200, 220, 0.03)'
+                ctx.strokeStyle = 'rgba(80, 200, 220, 0.02)'
                 ctx.lineWidth = 1
                 const startX = Math.random() * canvas.width
                 const startY = Math.random() * canvas.height

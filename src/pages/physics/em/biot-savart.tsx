@@ -299,7 +299,7 @@ export default function BiotSavart() {
             </div>
 
             {/* Navbar */}
-            <div className="relative z-10 flex items-center justify-between px-6 py-4 border-b border-white/10 bg-[#0f0a1a]/80 backdrop-blur-md">
+            <div className="relative z-10 flex items-center justify-between px-6 py-4 border-b border-white/10 bg-[#0f0a1a]/80">
                 <div className="flex items-center gap-4">
                     <Link to="/physics" className="p-2 rounded-full hover:bg-white/10 transition-colors">
                         <svg className="w-5 h-5 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24">

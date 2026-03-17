@@ -206,7 +206,7 @@ export default function CompoundInterest() {
                 {/* Year indicator during animation */}
                 {isAnimating && (
                     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-                        className="absolute top-4 left-1/2 -translate-x-1/2 bg-bg-elevated/80 backdrop-blur-sm rounded-lg px-4 py-2">
+                        className="absolute top-4 left-1/2 -translate-x-1/2 bg-bg-elevated/80 rounded-lg px-4 py-2">
                         <span className="text-text-muted text-sm">Year </span>
                         <span className="text-yellow-400 font-mono text-lg">{Math.floor(currentYear)}</span>
                     </motion.div>

@@ -170,7 +170,7 @@ export default function ComparativeAdvantage() {
                     <DemoMode steps={demoSteps} currentStep={demo.currentStep} isOpen={demo.isOpen} onClose={demo.close} onNext={demo.next} onPrev={demo.prev} onGoToStep={demo.goToStep} departmentColor={ECON_COLOR} />
                 </div>
             </div>
-            <div className="border-t border-white/10 bg-black/30 backdrop-blur-sm px-6 py-4">
+            <div className="border-t border-white/10 bg-bg-elevated px-6 py-4">
                 <div className="max-w-4xl mx-auto flex items-center justify-between gap-6">
                     <Toggle label="Show Trade Flows" value={showTrade} onChange={setShowTrade} />
                     <Toggle label="Terms of Trade" value={showTermsOfTrade} onChange={setShowTermsOfTrade} />

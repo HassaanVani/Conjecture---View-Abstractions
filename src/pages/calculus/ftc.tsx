@@ -416,7 +416,7 @@ export default function FTC() {
       </div>
 
       {/* Controls */}
-      <div className="border-t border-white/10 bg-black/40 backdrop-blur-sm px-6 py-3">
+      <div className="border-t border-white/10 bg-bg-elevated px-6 py-3">
         <div className="max-w-5xl mx-auto flex flex-wrap items-center gap-5">
           <Select
             label="f(t)"

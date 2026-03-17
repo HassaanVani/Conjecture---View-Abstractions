@@ -346,7 +346,7 @@ export default function Equilibrium() {
         </div>
       </div>
 
-      <div className="border-t border-white/10 bg-black/30 backdrop-blur-sm px-6 py-4">
+      <div className="border-t border-white/10 bg-bg-elevated px-6 py-4">
         <div className="max-w-5xl mx-auto flex flex-wrap items-end gap-6">
           <ControlGroup label="[A] Reactant">
             <Slider value={concA} onChange={setConcA} min={0} max={3} step={0.05} label={concA.toFixed(2)} />

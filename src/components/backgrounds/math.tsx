@@ -39,7 +39,7 @@ export function MathBackground({ className = '' }: BackgroundProps) {
                     const tensorValue = (t1 + t2) / 2
 
                     const lineWidth = 1 + Math.abs(tensorValue) * 1.5
-                    const alpha = Math.abs(tensorValue) * 0.2 + 0.03
+                    const alpha = Math.abs(tensorValue) * 0.04 + 0.01
 
                     ctx.strokeStyle = `rgba(100, 140, 255, ${alpha})`
                     ctx.lineWidth = lineWidth
@@ -58,12 +58,12 @@ export function MathBackground({ className = '' }: BackgroundProps) {
 
                     if (Math.abs(tensorValue) > 0.6) {
                         const nodeSize = 2 + Math.abs(tensorValue) * 4
-                        ctx.fillStyle = `rgba(100, 140, 255, ${Math.abs(tensorValue) * 0.15})`
+                        ctx.fillStyle = `rgba(100, 140, 255, ${Math.abs(tensorValue) * 0.03})`
                         ctx.beginPath()
                         ctx.arc(x, y, nodeSize, 0, Math.PI * 2)
                         ctx.fill()
 
-                        ctx.strokeStyle = `rgba(150, 180, 255, ${Math.abs(tensorValue) * 0.1})`
+                        ctx.strokeStyle = `rgba(150, 180, 255, ${Math.abs(tensorValue) * 0.02})`
                         ctx.lineWidth = 0.5
                         ctx.beginPath()
                         ctx.moveTo(x - 8, y)
@@ -76,7 +76,7 @@ export function MathBackground({ className = '' }: BackgroundProps) {
             }
 
             ctx.font = '12px monospace'
-            ctx.fillStyle = 'rgba(100, 140, 255, 0.06)'
+            ctx.fillStyle = 'rgba(100, 140, 255, 0.02)'
             const symbols = ['\u222B', '\u2211', '\u220F', '\u2202', '\u2207', '\u03C0', '\u221E', '\u03BB', '\u0394', '\u03A9']
             for (let i = 0; i < 15; i++) {
                 const sx = ((i * 137 + frame * 0.3) % (canvas.width + 100)) - 50

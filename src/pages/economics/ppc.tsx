@@ -203,7 +203,7 @@ export default function ProductionPossibilities() {
                 </div>
             </div>
 
-            <div className="border-t border-white/10 bg-black/30 backdrop-blur-sm px-6 py-4">
+            <div className="border-t border-white/10 bg-bg-elevated px-6 py-4">
                 <div className="max-w-4xl mx-auto flex items-center justify-between gap-6">
                     <Slider label="Economic Growth" value={shiftFactor} onChange={setShiftFactor} min={-1} max={1} step={0.05} />
                     <div className="flex items-center gap-3">

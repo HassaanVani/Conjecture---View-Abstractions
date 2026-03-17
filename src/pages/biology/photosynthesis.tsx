@@ -355,7 +355,7 @@ export default function Photosynthesis() {
         </div>
       </div>
 
-      <div className="border-t border-white/10 bg-black/30 backdrop-blur-sm px-6 py-4">
+      <div className="border-t border-white/10 bg-bg-elevated px-6 py-4">
         <div className="max-w-5xl mx-auto flex flex-wrap items-center justify-between gap-4">
           <div className="w-36">
             <Slider value={lightIntensity} onChange={setLightIntensity} min={0} max={100} label="Light Intensity" />

@@ -702,7 +702,7 @@ export default function SupplyDemand() {
                 <motion.div
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
-                    className="absolute top-4 left-4 bg-black/40 backdrop-blur-md rounded-xl p-4 border border-white/10 max-w-xs"
+                    className="absolute top-4 left-4 bg-bg-elevated rounded-xl p-4 border border-white/10 max-w-xs"
                 >
                     <div className="flex items-center justify-between mb-3">
                         <span className="text-sm text-white/60">Market Equilibrium</span>
@@ -757,7 +757,7 @@ export default function SupplyDemand() {
                 <motion.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
-                    className="absolute bottom-40 left-4 bg-black/40 backdrop-blur-md rounded-xl px-3 py-2 border border-white/10"
+                    className="absolute bottom-40 left-4 bg-bg-elevated rounded-xl px-3 py-2 border border-white/10"
                 >
                     <div className="text-xs text-white/50 mb-1">Total Revenue Test</div>
                     <div className="text-sm font-mono text-yellow-400">TR = ${getTotalRevenueTest().tr}</div>
@@ -785,7 +785,7 @@ export default function SupplyDemand() {
                             initial={{ opacity: 0, y: 10 }}
                             animate={{ opacity: 1, y: 0 }}
                             exit={{ opacity: 0, y: 10 }}
-                            className="absolute bottom-44 left-[200px] bg-[#1a150a] border border-white/20 rounded-xl p-4 shadow-2xl w-72"
+                            className="absolute bottom-44 left-[200px] bg-[#1a150a] border border-white/20 rounded-xl p-4 shadow-xl w-72"
                         >
                             <div className="flex items-center justify-between mb-3">
                                 <h4 className="text-sm font-medium text-yellow-400">Midpoint Elasticity</h4>
@@ -886,7 +886,7 @@ export default function SupplyDemand() {
             </div>
 
             {/* Controls */}
-            <div className="border-t border-white/10 bg-black/30 backdrop-blur-sm px-6 py-4">
+            <div className="border-t border-white/10 bg-bg-elevated px-6 py-4">
                 <div className="max-w-5xl mx-auto">
                     <div className="flex flex-wrap items-center justify-between gap-4">
                         {/* Curve adjustments */}
@@ -1013,14 +1013,14 @@ export default function SupplyDemand() {
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        className="absolute inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+                        className="absolute inset-0 bg-black/70 flex items-center justify-center z-50 p-4"
                         onClick={() => setShowDeterminants(false)}
                     >
                         <motion.div
                             initial={{ scale: 0.9, opacity: 0 }}
                             animate={{ scale: 1, opacity: 1 }}
                             exit={{ scale: 0.9, opacity: 0 }}
-                            className="bg-[#1a150a] border border-white/20 rounded-2xl p-6 max-w-2xl w-full shadow-2xl max-h-[80vh] overflow-auto"
+                            className="bg-[#1a150a] border border-white/20 rounded-xl p-6 max-w-2xl w-full shadow-xl max-h-[80vh] overflow-auto"
                             onClick={e => e.stopPropagation()}
                         >
                             <div className="flex items-center justify-between mb-4">
@@ -1093,14 +1093,14 @@ export default function SupplyDemand() {
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        className="absolute inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+                        className="absolute inset-0 bg-black/70 flex items-center justify-center z-50 p-4"
                         onClick={() => setShowDemo(false)}
                     >
                         <motion.div
                             initial={{ scale: 0.9, opacity: 0 }}
                             animate={{ scale: 1, opacity: 1 }}
                             exit={{ scale: 0.9, opacity: 0 }}
-                            className="bg-[#1a150a] border border-white/20 rounded-2xl p-6 max-w-md w-full shadow-2xl"
+                            className="bg-[#1a150a] border border-white/20 rounded-xl p-6 max-w-md w-full shadow-xl"
                             onClick={e => e.stopPropagation()}
                         >
                             <div className="flex items-center justify-between mb-4">

@@ -457,7 +457,7 @@ export default function DerivativeExplorer() {
                 <canvas ref={canvasRef} className="w-full h-full" />
 
                 {/* Legend overlay */}
-                <div className="absolute top-4 right-4 backdrop-blur-xl bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-xs space-y-1.5">
+                <div className="absolute top-4 right-4 bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-xs space-y-1.5">
                     <div className="flex items-center gap-2">
                         <span className="w-4 h-0.5 rounded" style={{ backgroundColor: CALC_COLOR, display: 'inline-block' }} />
                         <span className="text-white/60">f(x) = {func.expr}</span>

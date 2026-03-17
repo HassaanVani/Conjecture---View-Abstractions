@@ -35,7 +35,7 @@ export function CalculusBackground({ className = '' }: BackgroundProps) {
             ]
 
             for (const curve of curves) {
-                ctx.strokeStyle = `rgba(180, 120, 255, 0.06)`
+                ctx.strokeStyle = `rgba(180, 120, 255, 0.03)`
                 ctx.lineWidth = 2
                 ctx.beginPath()
                 for (let x = 0; x < canvas.width; x += 3) {
@@ -52,7 +52,7 @@ export function CalculusBackground({ className = '' }: BackgroundProps) {
                     const shadeStart = (canvas.width * 0.3 + Math.sin(time * 0.5) * canvas.width * 0.1)
                     const shadeEnd = shadeStart + canvas.width * 0.2
 
-                    ctx.fillStyle = `rgba(180, 120, 255, 0.02)`
+                    ctx.fillStyle = `rgba(180, 120, 255, 0.01)`
                     ctx.beginPath()
                     ctx.moveTo(shadeStart, canvas.height * 0.5)
 
@@ -79,21 +79,21 @@ export function CalculusBackground({ className = '' }: BackgroundProps) {
                     0.045 * 0.02 * Math.cos(px * 0.02 + time * 0.6)
 
                 const tangentLen = 40
-                ctx.strokeStyle = `rgba(140, 200, 255, 0.08)`
+                ctx.strokeStyle = `rgba(140, 200, 255, 0.03)`
                 ctx.lineWidth = 1
                 ctx.beginPath()
                 ctx.moveTo(px - tangentLen, py - slope * tangentLen * canvas.height)
                 ctx.lineTo(px + tangentLen, py + slope * tangentLen * canvas.height)
                 ctx.stroke()
 
-                ctx.fillStyle = `rgba(180, 120, 255, 0.12)`
+                ctx.fillStyle = `rgba(180, 120, 255, 0.03)`
                 ctx.beginPath()
                 ctx.arc(px, py, 3, 0, Math.PI * 2)
                 ctx.fill()
             }
 
             ctx.font = '14px serif'
-            ctx.fillStyle = 'rgba(180, 120, 255, 0.05)'
+            ctx.fillStyle = 'rgba(180, 120, 255, 0.02)'
             const symbols = ['\u222B', 'dx', "f'", '\u2202', 'lim', '\u221E', '\u03A3', '\u03B4', '\u03B5', 'dy']
             for (let i = 0; i < 10; i++) {
                 const sx = ((i * 127 + frame * 0.25) % (canvas.width + 50)) - 25

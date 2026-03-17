@@ -221,7 +221,7 @@ export default function Pendulum() {
         <div className="min-h-screen flex flex-col bg-[#0d0a1a] text-white overflow-hidden">
             <div className="absolute inset-0 pointer-events-none"><PhysicsBackground /></div>
 
-            <div className="relative z-10 flex items-center justify-between px-6 py-3 border-b border-white/10 bg-[#0d0a1a]/80 backdrop-blur-md">
+            <div className="relative z-10 flex items-center justify-between px-6 py-3 border-b border-white/10 bg-[#0d0a1a]/80">
                 <div className="flex items-center gap-3">
                     <Link to="/physics" className="p-2 rounded-full hover:bg-white/10 transition-colors">
                         <svg className="w-5 h-5 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24">

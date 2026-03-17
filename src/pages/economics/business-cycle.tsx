@@ -242,7 +242,7 @@ export default function BusinessCycle() {
                         { label: 'Unemployment', value: `${unemployment.toFixed(1)}%`, color: 'rgba(255,150,100,1)' },
                         { label: 'Trend Growth', value: `${trendGrowth.toFixed(1)}%`, color: 'rgba(220,180,80,0.8)' },
                     ]} />
-                    <div className="backdrop-blur-xl bg-black/40 border border-white/10 rounded-xl px-4 py-3">
+                    <div className="bg-bg-elevated border border-white/10 rounded-xl px-4 py-3">
                         <p className="text-xs text-white/60 mb-2">{phase.description}</p>
                         <p className="text-xs text-white/40">Policy: {phase.policy}</p>
                     </div>

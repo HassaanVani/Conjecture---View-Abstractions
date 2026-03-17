@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion'
 import { Link, useLocation } from 'react-router-dom'
 import type { ReactNode } from 'react'
+import { ArrowLeftIcon } from '@/components/icons'
 
 interface LayoutProps {
     children: ReactNode
@@ -17,22 +18,17 @@ export default function Layout({ children }: LayoutProps) {
     return (
         <div className="min-h-screen bg-bg">
             {!isHome && (
-                <header className="fixed top-0 left-0 right-0 z-50 bg-bg/80 backdrop-blur-md border-b border-border">
-                    <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                            <Link to="/" className="flex items-center gap-2.5 hover:opacity-80 transition-opacity">
-                                <span className="text-base font-semibold tracking-tight">Conjecture</span>
-                                <span className="text-[10px] text-text-dim tracking-widest uppercase hidden sm:inline">View Abstractions</span>
-                            </Link>
-                        </div>
+                <header className="fixed top-0 left-0 right-0 z-50 bg-bg border-b border-border">
+                    <div className="max-w-7xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
+                        <Link to="/" className="flex items-center hover:opacity-80 transition-opacity">
+                            <span className="text-base font-medium tracking-tight">Conjecture</span>
+                        </Link>
 
                         <Link
                             to={parentPath}
-                            className="flex items-center gap-2 text-text-secondary hover:text-text transition-colors text-sm focus-visible:outline-2 focus-visible:outline-white/40 focus-visible:outline-offset-2 rounded-lg px-2 py-1"
+                            className="flex items-center gap-1.5 text-text-secondary hover:text-text transition-colors text-sm focus-visible:outline-2 focus-visible:outline-white/40 focus-visible:outline-offset-2 rounded-[--radius-md] px-2 py-1"
                         >
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                            </svg>
+                            <ArrowLeftIcon className="w-4 h-4" />
                             <span className="hidden sm:inline">{parentLabel}</span>
                         </Link>
                     </div>
@@ -44,7 +40,7 @@ export default function Layout({ children }: LayoutProps) {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ duration: 0.25 }}
-                className={!isHome ? 'pt-16' : ''}
+                className={!isHome ? 'pt-14' : ''}
             >
                 {children}
             </motion.main>

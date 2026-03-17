@@ -1,28 +1,28 @@
 @import "tailwindcss";
 
 @theme {
-  /* Core backgrounds */
-  --color-bg: #0a0e1a;
-  --color-bg-elevated: #0f1420;
-  --color-bg-tertiary: #161c2e;
-  --color-bg-surface: rgba(255, 255, 255, 0.03);
+  /* Core backgrounds — warm dark */
+  --color-bg: #1d1d1f;
+  --color-bg-elevated: #2c2c2e;
+  --color-bg-tertiary: #3a3a3c;
+  --color-bg-surface: #2c2c2e;
 
   /* Node (legacy) */
-  --color-node: #2a3040;
-  --color-node-hover: #3a4050;
+  --color-node: #3a3a3c;
+  --color-node-hover: #48484a;
 
   /* Text hierarchy */
-  --color-text: #ffffff;
-  --color-text-secondary: rgba(255, 255, 255, 0.6);
-  --color-text-muted: rgba(255, 255, 255, 0.45);
-  --color-text-dim: rgba(255, 255, 255, 0.25);
+  --color-text: #f5f5f7;
+  --color-text-secondary: #a1a1a6;
+  --color-text-muted: #6e6e73;
+  --color-text-dim: #48484a;
 
   /* Functional */
-  --color-arrow: rgba(255, 255, 255, 0.35);
+  --color-arrow: #6e6e73;
   --color-accent-coral: #e85a4f;
   --color-accent-teal: #48b5a0;
-  --color-border: rgba(255, 255, 255, 0.1);
-  --color-border-hover: rgba(255, 255, 255, 0.2);
+  --color-border: rgba(255, 255, 255, 0.08);
+  --color-border-hover: rgba(255, 255, 255, 0.15);
 
   /* Typography */
   --font-display: 'Inter', system-ui, sans-serif;
@@ -37,14 +37,15 @@
   --color-economics: rgb(220, 180, 80);
   --color-calculus: rgb(180, 120, 255);
 
-  /* Department backgrounds */
-  --color-bg-math: #0a0e1a;
-  --color-bg-physics: #0d0a1a;
-  --color-bg-biology: #0a1a12;
-  --color-bg-chemistry: #1a120a;
-  --color-bg-cs: #0a1518;
-  --color-bg-economics: #1a150a;
-  --color-bg-calculus: #120a1a;
+  /* Radius */
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+
+  /* Shadows — elevation, not glow */
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.3);
+  --shadow-md: 0 4px 12px rgba(0,0,0,0.4);
+  --shadow-lg: 0 8px 24px rgba(0,0,0,0.5);
 }
 
 @layer base {
@@ -76,17 +77,6 @@
 }
 
 @layer components {
-  /* Glass morphism — single source of truth */
-  .glass {
-    @apply backdrop-blur-xl rounded-2xl border border-border;
-    background: rgba(10, 14, 26, 0.65);
-  }
-
-  .glass-subtle {
-    @apply backdrop-blur-lg rounded-xl border border-border;
-    background: rgba(10, 14, 26, 0.5);
-  }
-
   .simulation-canvas {
     @apply fixed inset-0 w-full h-full;
   }
@@ -102,15 +92,15 @@
   .node {
     @apply absolute flex items-center justify-center rounded-full font-mono font-medium transition-all duration-300;
     background: var(--color-node);
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+    box-shadow: var(--shadow-md);
   }
 
   .node-coral {
-    box-shadow: 0 0 0 3px var(--color-accent-coral), 0 4px 20px rgba(0, 0, 0, 0.4);
+    box-shadow: 0 0 0 2px var(--color-accent-coral), var(--shadow-sm);
   }
 
   .node-teal {
-    box-shadow: 0 0 0 3px var(--color-accent-teal), 0 4px 20px rgba(0, 0, 0, 0.4);
+    box-shadow: 0 0 0 2px var(--color-accent-teal), var(--shadow-sm);
   }
 
   .operation-text {
@@ -118,17 +108,17 @@
   }
 
   .control-input {
-    @apply bg-bg-elevated border border-border rounded-lg px-4 py-3 text-text font-mono text-base focus:outline-none focus:border-text-muted focus:ring-1 focus:ring-text-muted/30 transition-all;
+    @apply bg-bg-elevated border border-border rounded-[--radius-md] px-4 py-3 text-text font-mono text-base focus:outline-none focus:border-text-muted focus:ring-1 focus:ring-text-muted/30 transition-all;
   }
 
-  /* Buttons */
+  /* Buttons — solid fills */
   .btn-primary {
-    @apply px-5 py-2.5 rounded-lg font-medium text-sm transition-all duration-200 bg-white text-bg;
+    @apply px-5 py-2.5 rounded-[--radius-md] font-medium text-sm transition-all duration-200 bg-white text-bg;
   }
 
   .btn-primary:hover {
-    background: rgba(255, 255, 255, 0.85);
-    box-shadow: 0 2px 12px rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.88);
+    box-shadow: var(--shadow-sm);
   }
 
   .btn-primary:active {
@@ -136,15 +126,13 @@
   }
 
   .btn-secondary {
-    @apply px-5 py-2.5 rounded-lg font-medium text-sm transition-all duration-200 text-text-secondary;
-    background: rgba(255, 255, 255, 0.06);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    @apply px-5 py-2.5 rounded-[--radius-md] font-medium text-sm transition-all duration-200 text-text-secondary;
+    background: var(--color-bg-tertiary);
   }
 
   .btn-secondary:hover {
     @apply text-text;
-    background: rgba(255, 255, 255, 0.12);
-    border-color: rgba(255, 255, 255, 0.2);
+    background: #48484a;
   }
 
   .btn-secondary:active {
@@ -152,7 +140,7 @@
   }
 
   .btn-ghost {
-    @apply px-5 py-2.5 rounded-lg font-medium text-sm transition-all duration-200 bg-transparent text-text-muted;
+    @apply px-5 py-2.5 rounded-[--radius-md] font-medium text-sm transition-all duration-200 bg-transparent text-text-muted;
   }
 
   .btn-ghost:hover {
@@ -160,7 +148,7 @@
     background: rgba(255, 255, 255, 0.06);
   }
 
-  /* Focus ring for all interactive elements */
+  /* Focus ring */
   .btn-primary:focus-visible,
   .btn-secondary:focus-visible,
   .btn-ghost:focus-visible,
@@ -169,23 +157,22 @@
     outline-offset: 2px;
   }
 
-  /* Cards */
+  /* Cards — solid surface, elevation */
   .hub-card {
-    @apply relative p-6 rounded-2xl cursor-pointer transition-all duration-300;
-    background: rgba(255, 255, 255, 0.02);
-    border: 1px solid var(--color-border);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    @apply relative p-6 cursor-pointer transition-all duration-300;
+    border-radius: var(--radius-lg);
+    background: var(--color-bg-elevated);
+    box-shadow: var(--shadow-sm);
   }
 
   .hub-card:hover {
-    background: rgba(255, 255, 255, 0.05);
-    border-color: var(--color-border-hover);
     transform: translateY(-2px);
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    box-shadow: var(--shadow-md);
+    border: 1px solid var(--color-border-hover);
   }
 
   .hub-card-title {
-    @apply text-lg font-medium text-text mb-1.5;
+    @apply text-base font-medium text-text mb-1;
   }
 
   .hub-card-desc {
@@ -195,13 +182,13 @@
 
 @layer utilities {
   .fade-in {
-    animation: fadeIn 0.5s ease-out;
+    animation: fadeIn 0.4s ease-out;
   }
 
   @keyframes fadeIn {
     from {
       opacity: 0;
-      transform: translateY(10px);
+      transform: translateY(8px);
     }
 
     to {

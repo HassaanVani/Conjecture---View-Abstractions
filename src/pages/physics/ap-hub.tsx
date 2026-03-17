@@ -1,583 +1,146 @@
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion } from 'framer-motion'
 import { Link } from 'react-router-dom'
-import { useState } from 'react'
 import { PhysicsBackground } from '@/components/backgrounds'
 
-type Track = 'ap1' | 'ap2' | 'mech-c' | 'em-c'
-
-interface Unit {
-    number: number
+interface Viz {
+    id: string
     title: string
-    visualizations: {
-        id: string
-        title: string
-        symbol: string
-        description: string
-        to: string
-        comingSoon?: boolean
-    }[]
+    description: string
+    to: string
+    comingSoon?: boolean
 }
 
-const ap1Units: Unit[] = [
-    {
-        number: 1,
-        title: 'Kinematics',
-        visualizations: [
-            {
-                id: 'projectile',
-                title: 'Projectile Motion',
-                symbol: 'v₀',
-                description: '2D kinematics with gravity and launch angles',
-                to: '/physics/kinematics/projectile',
-            },
-            {
-                id: 'motion-1d',
-                title: '1D Motion',
-                symbol: 'x(t)',
-                description: 'Position, velocity, and acceleration graphs',
-                to: '/physics/kinematics/motion-1d',
-                comingSoon: true
-            },
-        ],
-    },
-    {
-        number: 2,
-        title: 'Dynamics',
-        visualizations: [
-            {
-                id: 'incline',
-                title: 'Incline Plane',
-                symbol: 'mgsinθ',
-                description: 'Forces, friction, and free body diagrams',
-                to: '/physics/dynamics/incline',
-            },
-            {
-                id: 'atwood',
-                title: 'Atwood Machine',
-                symbol: 'ΣF=ma',
-                description: 'Connected systems and tension',
-                to: '/physics/dynamics/atwood',
-                comingSoon: true
-            },
-        ],
-    },
-    {
-        number: 3,
-        title: 'Circular Motion & Gravitation',
-        visualizations: [
-            {
-                id: 'orbit',
-                title: 'Orbital Motion',
-                symbol: 'GM/r²',
-                description: 'Kepler\'s laws and gravitational forces',
-                to: '/physics/circular/orbit',
-            },
-        ],
-    },
-    {
-        number: 4,
-        title: 'Energy',
-        visualizations: [
-            {
-                id: 'coaster',
-                title: 'Energy Conservation',
-                symbol: '½mv²',
-                description: 'Potential and kinetic energy transformations',
-                to: '/physics/energy/coaster',
-            },
-        ],
-    },
-    {
-        number: 5,
-        title: 'Momentum',
-        visualizations: [
-            {
-                id: 'collision',
-                title: 'Collisions',
-                symbol: 'p=mv',
-                description: 'Elastic and inelastic collisions in 1D/2D',
-                to: '/physics/momentum/collision',
-            },
-        ],
-    },
-    {
-        number: 6,
-        title: 'Simple Harmonic Motion',
-        visualizations: [
-            {
-                id: 'pendulum',
-                title: 'Pendulum',
-                symbol: 'T=2π√(L/g)',
-                description: 'Period, frequency, and restoring forces',
-                to: '/physics/pendulum',
-            },
-            {
-                id: 'spring',
-                title: 'Spring Mass',
-                symbol: 'F=-kx',
-                description: 'Damped harmonic oscillator',
-                to: '/physics/shm/spring',
-            },
-        ],
-    },
-    {
-        number: 7,
-        title: 'Torque & Rotation',
-        visualizations: [
-            {
-                id: 'balance',
-                title: 'Torque Balance',
-                symbol: 'τ=rF',
-                description: 'Rotational equilibrium and lever arms',
-                to: '/physics/rotation/balance',
-            },
-        ],
-    },
-]
+interface TopicGroup {
+    name: string
+    visualizations: Viz[]
+}
 
-const ap2Units: Unit[] = [
+const topics: TopicGroup[] = [
     {
-        number: 1,
-        title: 'Fluids',
+        name: 'Mechanics',
         visualizations: [
-            {
-                id: 'buoyancy',
-                title: 'Buoyancy',
-                symbol: 'ρVg',
-                description: 'Archimedes principle and fluid dynamics',
-                to: '/physics/fluids/buoyancy',
-            },
-            {
-                id: 'flow',
-                title: 'Fluid Dynamics',
-                symbol: 'A₁v₁=A₂v₂',
-                description: 'Bernoulli principle and continuity equation',
-                to: '/physics/fluids/flow',
-            },
+            { id: 'projectile', title: 'Projectile Motion', description: '2D kinematics with gravity and launch angles', to: '/physics/kinematics/projectile' },
+            { id: 'incline', title: 'Incline Plane', description: 'Forces, friction, and free body diagrams', to: '/physics/dynamics/incline' },
+            { id: 'orbit', title: 'Orbital Motion', description: "Kepler's laws and gravitational forces", to: '/physics/circular/orbit' },
+            { id: 'coaster', title: 'Energy Conservation', description: 'Potential and kinetic energy transformations', to: '/physics/energy/coaster' },
+            { id: 'collision', title: 'Collisions', description: 'Elastic and inelastic collisions in 1D/2D', to: '/physics/momentum/collision' },
+            { id: 'pendulum', title: 'Pendulum', description: 'Period, frequency, and restoring forces', to: '/physics/pendulum' },
+            { id: 'spring', title: 'Spring Mass', description: 'Damped harmonic oscillator', to: '/physics/shm/spring' },
+            { id: 'balance', title: 'Torque Balance', description: 'Rotational equilibrium and lever arms', to: '/physics/rotation/balance' },
+            { id: 'drag', title: 'Drag Simulation', description: 'Air resistance, terminal velocity, and Reynolds number', to: '/physics/mechanics/drag' },
+            { id: 'oscillator', title: 'Oscillator', description: 'Damped harmonic motion and phase space', to: '/physics/mechanics/oscillator' },
+            { id: 'resonance', title: 'Driven Resonance', description: 'Driven oscillation, resonance curves, and Q-factor', to: '/physics/mechanics/resonance' },
+            { id: 'center-of-mass', title: 'Center of Mass', description: 'Multi-body systems, explosions, and collisions', to: '/physics/mechanics/center-of-mass' },
+            { id: 'grav-field', title: 'Gravitational Field', description: 'Field visualization and equipotential surfaces', to: '/physics/circular/grav-field' },
         ],
     },
     {
-        number: 2,
-        title: 'Thermodynamics',
+        name: 'Waves & Optics',
         visualizations: [
-            {
-                id: 'gas',
-                title: 'Ideal Gas Law',
-                symbol: 'PV=nRT',
-                description: 'Kinetic molecular theory and particle physics',
-                to: '/physics/thermo/gas',
-            },
+            { id: 'waves', title: 'Wave Interference', description: 'Superposition, diffraction, and interference', to: '/physics/waves' },
+            { id: 'diffraction', title: 'Diffraction', description: 'Single and double slit diffraction patterns', to: '/physics/waves/diffraction' },
+            { id: 'doppler', title: 'Doppler Effect', description: 'Frequency shifts from relative motion', to: '/physics/waves/doppler' },
+            { id: 'standing', title: 'Standing Waves', description: 'Nodes, antinodes, and harmonics', to: '/physics/waves/standing' },
+            { id: 'snell', title: "Snell's Law", description: 'Refraction at boundaries', to: '/physics/optics/snell' },
+            { id: 'lenses', title: 'Lenses', description: 'Converging and diverging lens ray tracing', to: '/physics/optics/lenses' },
         ],
     },
     {
-        number: 3,
-        title: 'Electric Force, Field & Potential',
+        name: 'Electricity & Magnetism',
         visualizations: [
-            {
-                id: 'fields',
-                title: 'Electric Fields',
-                symbol: 'E=kQ/r²',
-                description: 'Field mapping and superposition',
-                to: '/physics/electro/fields',
-            },
+            { id: 'fields', title: 'Electric Fields', description: 'Field mapping and superposition', to: '/physics/electro/fields' },
+            { id: 'dc', title: 'DC Circuits', description: 'Series and parallel resistor networks', to: '/physics/circuits/dc' },
+            { id: 'rc', title: 'RC Circuit', description: 'Capacitor charging and exponential decay', to: '/physics/circuits/rc' },
+            { id: 'particle', title: 'Particle in B-Field', description: 'Lorentz force and cyclotron motion', to: '/physics/magnetism/particle' },
+            { id: 'flux', title: "Faraday's Law", description: 'Magnetic flux and induced EMF', to: '/physics/magnetism/flux' },
+            { id: 'gauss', title: "Gauss's Law", description: 'Gaussian surfaces and enclosed charge', to: '/physics/em/gauss' },
+            { id: 'capacitor', title: 'Capacitors & Dielectrics', description: 'Parallel plate capacitors and energy storage', to: '/physics/em/capacitor' },
+            { id: 'biot-savart', title: 'Biot-Savart Law', description: 'Magnetic field from current elements', to: '/physics/em/biot-savart' },
+            { id: 'ampere', title: "Ampere's Law", description: 'Solenoids, toroids, and enclosed current', to: '/physics/em/ampere' },
+            { id: 'rlc', title: 'RLC Circuit', description: 'Impedance, resonance, and phasor diagrams', to: '/physics/em/rlc' },
+            { id: 'rl-lc', title: 'RL/LC Circuits', description: 'Transient response and LC oscillations', to: '/physics/circuits/rl-lc' },
+            { id: 'em-wave', title: 'EM Wave Propagation', description: 'Electric and magnetic field wave coupling', to: '/physics/em/em-wave' },
         ],
     },
     {
-        number: 4,
-        title: 'Electric Circuits',
+        name: 'Thermodynamics',
         visualizations: [
-            {
-                id: 'rc',
-                title: 'RC Circuit',
-                symbol: 'τ=RC',
-                description: 'Capacitor charging and exponential decay',
-                to: '/physics/circuits/rc',
-            },
+            { id: 'gas', title: 'Ideal Gas Law', description: 'Kinetic molecular theory and particle physics', to: '/physics/thermo/gas' },
+            { id: 'pv', title: 'PV Diagrams', description: 'Work, heat, and thermodynamic processes', to: '/physics/thermo/pv' },
+            { id: 'cycles', title: 'Thermodynamic Cycles', description: 'Carnot, Otto, and Diesel cycles', to: '/physics/thermo/cycles' },
         ],
     },
     {
-        number: 5,
-        title: 'Magnetism & Induction',
+        name: 'Modern Physics',
         visualizations: [
-            {
-                id: 'particle',
-                title: 'Particle in B-Field',
-                symbol: 'F=qvB',
-                description: 'Lorentz force and cyclotron motion',
-                to: '/physics/magnetism/particle',
-            },
-            {
-                id: 'flux',
-                title: 'Faraday\'s Law',
-                symbol: 'ε=-dΦ/dt',
-                description: 'Magnetic flux and induced EMF',
-                to: '/physics/magnetism/flux',
-            },
+            { id: 'photoelectric', title: 'Photoelectric Effect', description: 'Photon energy and electron ejection', to: '/physics/modern/photoelectric' },
+            { id: 'energy-levels', title: 'Energy Levels', description: 'Atomic spectra and quantum transitions', to: '/physics/modern/energy-levels' },
+            { id: 'decay', title: 'Radioactive Decay', description: 'Half-life, decay chains, and activity', to: '/physics/modern/decay' },
         ],
     },
     {
-        number: 6,
-        title: 'Geometric & Physical Optics',
+        name: 'Fluids',
         visualizations: [
-            {
-                id: 'waves',
-                title: 'Wave Interference',
-                symbol: 'λ',
-                description: 'Superposition, diffraction, and interference',
-                to: '/physics/waves',
-            },
-        ],
-    },
-    {
-        number: 7,
-        title: 'Quantum, Atomic & Nuclear Physics',
-        visualizations: [],
-    },
-
-]
-
-const mechCUnits: Unit[] = [
-    {
-        number: 1,
-        title: 'Kinematics & Dynamics',
-        visualizations: [
-            {
-                id: 'drag',
-                title: 'Drag Simulation',
-                symbol: 'F_d',
-                description: 'Air resistance, terminal velocity, and Reynolds number',
-                to: '/physics/mechanics/drag',
-            },
-        ],
-    },
-    {
-        number: 2,
-        title: 'Oscillations',
-        visualizations: [
-            {
-                id: 'oscillator',
-                title: 'Oscillator',
-                symbol: 'ω₀',
-                description: 'Damped harmonic motion and phase space',
-                to: '/physics/mechanics/oscillator',
-            },
-            {
-                id: 'resonance',
-                title: 'Driven Resonance',
-                symbol: 'ω=ω₀',
-                description: 'Driven oscillation, resonance curves, and Q-factor',
-                to: '/physics/mechanics/resonance',
-            },
-        ],
-    },
-    {
-        number: 3,
-        title: 'Center of Mass & Gravitation',
-        visualizations: [
-            {
-                id: 'center-of-mass',
-                title: 'Center of Mass',
-                symbol: 'r_cm',
-                description: 'Multi-body systems, explosions, and collisions',
-                to: '/physics/mechanics/center-of-mass',
-            },
-            {
-                id: 'grav-field',
-                title: 'Gravitational Field',
-                symbol: '-GM/r²',
-                description: 'Field visualization and equipotential surfaces',
-                to: '/physics/circular/grav-field',
-            },
-        ],
-    },
-]
-
-const emCUnits: Unit[] = [
-    {
-        number: 1,
-        title: "Gauss's Law & Electric Fields",
-        visualizations: [
-            {
-                id: 'gauss',
-                title: "Gauss's Law",
-                symbol: 'Φ_E',
-                description: 'Gaussian surfaces and enclosed charge calculations',
-                to: '/physics/em/gauss',
-            },
-            {
-                id: 'capacitor',
-                title: 'Capacitors & Dielectrics',
-                symbol: 'C=εA/d',
-                description: 'Parallel plate capacitors, energy storage, dielectrics',
-                to: '/physics/em/capacitor',
-            },
-        ],
-    },
-    {
-        number: 2,
-        title: 'Magnetic Fields & Forces',
-        visualizations: [
-            {
-                id: 'biot-savart',
-                title: 'Biot-Savart Law',
-                symbol: 'dB',
-                description: 'Magnetic field from current elements and loops',
-                to: '/physics/em/biot-savart',
-            },
-            {
-                id: 'ampere',
-                title: "Ampere's Law",
-                symbol: '∮B·dl',
-                description: 'Solenoids, toroids, and enclosed current',
-                to: '/physics/em/ampere',
-            },
-        ],
-    },
-    {
-        number: 3,
-        title: 'Circuits',
-        visualizations: [
-            {
-                id: 'rlc',
-                title: 'RLC Circuit',
-                symbol: 'Z',
-                description: 'Impedance, resonance, and phasor diagrams',
-                to: '/physics/em/rlc',
-            },
-            {
-                id: 'rl-lc',
-                title: 'RL/LC Circuits',
-                symbol: 'τ=L/R',
-                description: 'Transient response and LC oscillations',
-                to: '/physics/circuits/rl-lc',
-            },
-        ],
-    },
-    {
-        number: 4,
-        title: 'Electromagnetic Waves',
-        visualizations: [
-            {
-                id: 'em-wave',
-                title: 'EM Wave Propagation',
-                symbol: 'E×B',
-                description: 'Electric and magnetic field wave coupling',
-                to: '/physics/em/em-wave',
-            },
+            { id: 'buoyancy', title: 'Buoyancy', description: "Archimedes' principle and fluid statics", to: '/physics/fluids/buoyancy' },
+            { id: 'flow', title: 'Fluid Dynamics', description: 'Bernoulli principle and continuity equation', to: '/physics/fluids/flow' },
         ],
     },
 ]
 
 export default function PhysicsHub() {
-    const [track, setTrack] = useState<Track>('ap1')
-    const units = track === 'ap1' ? ap1Units : track === 'ap2' ? ap2Units : track === 'mech-c' ? mechCUnits : emCUnits
-    const trackColor = track === 'ap1' ? 'rgb(100, 140, 255)' : track === 'ap2' ? 'rgb(160, 100, 255)' : track === 'mech-c' ? 'rgb(100, 200, 180)' : 'rgb(255, 140, 100)'
-
     return (
-        <div className="min-h-screen relative bg-[#0d0a1a]">
-            <PhysicsBackground />
+        <div className="min-h-screen relative bg-bg">
+            <PhysicsBackground className="opacity-40" />
 
-            <div className="relative z-10 px-8 py-12 max-w-6xl mx-auto">
-                {/* Header */}
+            <div className="relative z-10 px-5 sm:px-8 py-10 sm:py-14 max-w-6xl mx-auto">
                 <motion.header
-                    initial={{ opacity: 0, y: -20 }}
+                    initial={{ opacity: 0, y: -16 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.8 }}
-                    className="mb-8"
-                >
-                    <Link to="/" className="inline-flex items-center gap-2 text-white/40 hover:text-white/70 text-sm mb-4 transition-colors">
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                        </svg>
-                        Back to Hub
-                    </Link>
-                    <div className="flex items-center gap-4">
-                        <span className="text-4xl">⚛️</span>
-                        <div>
-                            <h1 className="text-4xl md:text-5xl font-light tracking-tight text-white">
-                                AP Physics
-                            </h1>
-                            <p className="text-white/50 text-lg">
-                                Interactive visualizations for AP Physics 1, 2, C:Mech & C:E&M
-                            </p>
-                        </div>
-                    </div>
-                </motion.header>
-
-                {/* Track Selector */}
-                <motion.nav
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.6, delay: 0.2 }}
+                    transition={{ duration: 0.5 }}
                     className="mb-10"
                 >
-                    <div className="flex flex-wrap gap-3">
-                        <button
-                            onClick={() => setTrack('ap1')}
-                            className={`
-                                relative px-5 py-2.5 rounded-xl text-base font-medium transition-all duration-300
-                                flex items-center gap-2.5 border
-                                ${track === 'ap1'
-                                    ? 'bg-blue-500/10 border-blue-500/30 text-blue-400'
-                                    : 'bg-white/[0.02] border-white/[0.08] text-white/50 hover:bg-white/[0.05] hover:text-white/70'
-                                }
-                            `}
-                        >
-                            <span className="text-xl">🍎</span>
-                            <div className="text-left">
-                                <div className="font-semibold text-sm">AP Physics 1</div>
-                                <div className="text-[10px] opacity-60">Mechanics</div>
-                            </div>
-                        </button>
+                    <h1 className="text-3xl sm:text-4xl font-light tracking-tight text-text mb-1">
+                        Physics
+                    </h1>
+                    <p className="text-text-secondary text-sm">
+                        Mechanics, waves, E&M, thermodynamics, and modern physics
+                    </p>
+                </motion.header>
 
-                        <button
-                            onClick={() => setTrack('ap2')}
-                            className={`
-                                relative px-5 py-2.5 rounded-xl text-base font-medium transition-all duration-300
-                                flex items-center gap-2.5 border
-                                ${track === 'ap2'
-                                    ? 'bg-purple-500/10 border-purple-500/30 text-purple-400'
-                                    : 'bg-white/[0.02] border-white/[0.08] text-white/50 hover:bg-white/[0.05] hover:text-white/70'
-                                }
-                            `}
+                <div className="space-y-10">
+                    {topics.map((group, gi) => (
+                        <motion.section
+                            key={group.name}
+                            initial={{ opacity: 0, y: 16 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.4, delay: gi * 0.08 }}
                         >
-                            <span className="text-xl">⚡</span>
-                            <div className="text-left">
-                                <div className="font-semibold text-sm">AP Physics 2</div>
-                                <div className="text-[10px] opacity-60">E&M, Fluids, Optics</div>
-                            </div>
-                        </button>
+                            <h2 className="text-xs font-semibold uppercase tracking-widest text-text-muted mb-4">
+                                {group.name}
+                            </h2>
 
-                        <button
-                            onClick={() => setTrack('mech-c')}
-                            className={`
-                                relative px-5 py-2.5 rounded-xl text-base font-medium transition-all duration-300
-                                flex items-center gap-2.5 border
-                                ${track === 'mech-c'
-                                    ? 'bg-teal-500/10 border-teal-500/30 text-teal-400'
-                                    : 'bg-white/[0.02] border-white/[0.08] text-white/50 hover:bg-white/[0.05] hover:text-white/70'
-                                }
-                            `}
-                        >
-                            <span className="text-xl">⚙️</span>
-                            <div className="text-left">
-                                <div className="font-semibold text-sm">Physics C: Mech</div>
-                                <div className="text-[10px] opacity-60">Calculus-Based</div>
-                            </div>
-                        </button>
-
-                        <button
-                            onClick={() => setTrack('em-c')}
-                            className={`
-                                relative px-5 py-2.5 rounded-xl text-base font-medium transition-all duration-300
-                                flex items-center gap-2.5 border
-                                ${track === 'em-c'
-                                    ? 'bg-orange-500/10 border-orange-500/30 text-orange-400'
-                                    : 'bg-white/[0.02] border-white/[0.08] text-white/50 hover:bg-white/[0.05] hover:text-white/70'
-                                }
-                            `}
-                        >
-                            <span className="text-xl">🔌</span>
-                            <div className="text-left">
-                                <div className="font-semibold text-sm">Physics C: E&M</div>
-                                <div className="text-[10px] opacity-60">Calculus-Based</div>
-                            </div>
-                        </button>
-                    </div>
-                </motion.nav>
-
-                {/* Units */}
-                <AnimatePresence mode="wait">
-                    <motion.div
-                        key={track}
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -10 }}
-                        transition={{ duration: 0.4 }}
-                        className="space-y-8"
-                    >
-                        {units.map((unit, unitIndex) => (
-                            <motion.section
-                                key={unit.number}
-                                initial={{ opacity: 0, y: 20 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ duration: 0.4, delay: unitIndex * 0.1 }}
-                            >
-                                <div className="flex items-center gap-3 mb-4">
-                                    <div
-                                        className="w-8 h-8 rounded-lg flex items-center justify-center text-sm font-bold"
-                                        style={{
-                                            backgroundColor: `${trackColor}20`,
-                                            color: trackColor
-                                        }}
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                                {group.visualizations.map((viz) => (
+                                    <Link
+                                        key={viz.id}
+                                        to={viz.comingSoon ? '#' : viz.to}
+                                        className={`group block ${viz.comingSoon ? 'cursor-not-allowed opacity-50' : ''}`}
+                                        onClick={(e) => viz.comingSoon && e.preventDefault()}
                                     >
-                                        {unit.number}
-                                    </div>
-                                    <h2 className="text-xl font-medium text-white/80">
-                                        {unit.title}
-                                    </h2>
-                                </div>
-
-                                {unit.visualizations.length > 0 ? (
-                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 ml-11">
-                                        {unit.visualizations.map((viz) => (
-                                            <Link
-                                                key={viz.id}
-                                                to={viz.comingSoon ? '#' : viz.to}
-                                                className={`group block ${viz.comingSoon ? 'cursor-not-allowed opacity-60' : ''}`}
-                                                onClick={(e) => viz.comingSoon && e.preventDefault()}
-                                            >
-                                                <div
-                                                    className="relative overflow-hidden rounded-xl backdrop-blur-xl bg-white/[0.03] border border-white/[0.08] p-5 transition-all duration-300 hover:bg-white/[0.06] hover:border-white/[0.15] hover:shadow-[0_8px_32px_rgba(0,0,0,0.3)]"
-                                                >
-                                                    <div
-                                                        className="absolute top-3 right-3 text-2xl font-mono opacity-10 group-hover:opacity-25 transition-opacity"
-                                                        style={{ color: trackColor }}
-                                                    >
-                                                        {viz.symbol}
-                                                    </div>
-
-                                                    <h3 className="text-lg font-medium mb-1.5 group-hover:text-white transition-colors text-white/90">
-                                                        {viz.title}
-                                                    </h3>
-
-                                                    <p className="text-white/50 text-sm leading-relaxed">
-                                                        {viz.description}
-                                                    </p>
-
-                                                    <div className="mt-3 flex items-center text-white/30 text-xs group-hover:text-white/50 transition-colors">
-                                                        <span>{viz.comingSoon ? 'Coming Soon' : 'Explore'}</span>
-                                                        {!viz.comingSoon && (
-                                                            <svg className="w-4 h-4 ml-1 transform group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                                                            </svg>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                            </Link>
-                                        ))}
-                                    </div>
-                                ) : (
-                                    <div className="ml-11 py-4 px-5 rounded-xl bg-white/[0.02] border border-white/[0.05] border-dashed">
-                                        <p className="text-white/30 text-sm italic">
-                                            Visualizations coming soon
-                                        </p>
-                                    </div>
-                                )}
-                            </motion.section>
-                        ))}
-                    </motion.div>
-                </AnimatePresence>
-
-                {/* Footer */}
-                <motion.footer
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ delay: 0.8 }}
-                    className="mt-16 text-center text-white/30 text-xs tracking-wider"
-                >
-                    Aligned with College Board AP Physics Curriculum
-                </motion.footer>
+                                        <div className="bg-bg-elevated rounded-[--radius-lg] p-4 shadow-[--shadow-sm] transition-all duration-200 hover:shadow-[--shadow-md] hover:-translate-y-0.5">
+                                            <h3 className="text-sm font-medium text-text mb-1 group-hover:text-text transition-colors">
+                                                {viz.title}
+                                            </h3>
+                                            <p className="text-text-secondary text-xs leading-relaxed">
+                                                {viz.description}
+                                            </p>
+                                        </div>
+                                    </Link>
+                                ))}
+                            </div>
+                        </motion.section>
+                    ))}
+                </div>
             </div>
         </div>
     )

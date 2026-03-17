@@ -26,7 +26,7 @@ export function InfoPanel({
             initial={{ opacity: 0, x: 16 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.3, delay: 0.2 }}
-            className={cn('glass-subtle px-4 py-3', className)}
+            className={cn('bg-bg-elevated rounded-[--radius-lg] shadow-[--shadow-sm] px-4 py-3', className)}
         >
             {title && (
                 <h3
@@ -40,7 +40,7 @@ export function InfoPanel({
                 {items.map((item, i) => (
                     <div key={i} className="flex items-baseline justify-between gap-4">
                         <span className="text-text-muted text-xs whitespace-nowrap">{item.label}</span>
-                        <span className="font-mono text-xs tabular-nums" style={{ color: item.color || 'white' }}>
+                        <span className="font-mono text-xs tabular-nums" style={{ color: item.color || '#f5f5f7' }}>
                             {typeof item.value === 'number' ? item.value.toFixed(2) : item.value}
                             {item.unit && (
                                 <span className="text-text-dim text-[10px] ml-1">{item.unit}</span>
@@ -64,13 +64,12 @@ export function APTag({ course, unit, className, color = 'rgb(160, 100, 255)' }:
     return (
         <div
             className={cn(
-                'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-semibold tracking-wide',
-                'bg-white/5 border border-border',
+                'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-[--radius-md] text-[10px] font-semibold tracking-wide',
+                'bg-bg-tertiary',
                 className
             )}
             style={{ color }}
         >
-            <span className="opacity-50">AP</span>
             <span>{course}</span>
             {unit && (
                 <>

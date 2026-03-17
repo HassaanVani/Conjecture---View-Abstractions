@@ -358,7 +358,7 @@ export default function Kinetics() {
         </div>
       </div>
 
-      <div className="border-t border-white/10 bg-black/30 backdrop-blur-sm px-6 py-4">
+      <div className="border-t border-white/10 bg-bg-elevated px-6 py-4">
         <div className="max-w-5xl mx-auto flex flex-wrap items-end gap-6">
           <ControlGroup label="[A] (M)">
             <Slider value={concA} onChange={setConcA} min={0.1} max={3.0} step={0.1} label={concA.toFixed(1)} />

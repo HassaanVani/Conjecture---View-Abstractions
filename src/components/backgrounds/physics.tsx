@@ -46,7 +46,7 @@ export function PhysicsBackground({ className = '' }: BackgroundProps) {
                     amplitude /= sources.length
 
                     const intensity = (amplitude + 1) / 2
-                    const alpha = intensity * 0.12
+                    const alpha = intensity * 0.03
                     ctx.fillStyle = `rgba(160, 100, 255, ${alpha})`
                     ctx.fillRect(x, y, 6, 6)
                 }
@@ -54,7 +54,7 @@ export function PhysicsBackground({ className = '' }: BackgroundProps) {
 
             for (const source of sources) {
                 const pulse = Math.sin(time * 2) * 0.3 + 0.7
-                ctx.fillStyle = `rgba(200, 150, 255, ${0.3 * pulse})`
+                ctx.fillStyle = `rgba(200, 150, 255, ${0.05 * pulse})`
                 ctx.beginPath()
                 ctx.arc(source.x * canvas.width, source.y * canvas.height, 8, 0, Math.PI * 2)
                 ctx.fill()

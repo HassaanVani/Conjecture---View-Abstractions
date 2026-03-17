@@ -1,220 +1,105 @@
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion } from 'framer-motion'
 import { Link } from 'react-router-dom'
 import { BiologyBackground } from '@/components/backgrounds'
 
-interface Unit {
-    number: number
+interface Viz {
+    id: string
     title: string
-    visualizations: {
-        id: string
-        title: string
-        symbol: string
-        description: string
-        to: string
-    }[]
+    description: string
+    to: string
 }
 
-const units: Unit[] = [
+interface TopicGroup {
+    name: string
+    visualizations: Viz[]
+}
+
+const topics: TopicGroup[] = [
     {
-        number: 1,
-        title: 'Chemistry of Life',
+        name: 'Cell Biology',
         visualizations: [
-            {
-                id: 'macromolecules',
-                title: 'Macromolecules',
-                symbol: 'C₆H₁₂O₆',
-                description: 'Proteins, lipids, carbohydrates, and nucleic acids',
-                to: '/biology/macromolecules',
-            },
+            { id: 'macromolecules', title: 'Macromolecules', description: 'Proteins, lipids, carbohydrates, and nucleic acids', to: '/biology/macromolecules' },
+            { id: 'cell-structure', title: 'Cell Structure', description: 'Organelles, plant vs animal cells, membrane transport', to: '/biology/cell-structure' },
+            { id: 'cell-division', title: 'Cell Division', description: 'Mitosis, meiosis, and the cell cycle', to: '/biology/cell-division' },
         ],
     },
     {
-        number: 2,
-        title: 'Cell Structure and Function',
+        name: 'Energetics',
         visualizations: [
-            {
-                id: 'cell-structure',
-                title: 'Cell Structure',
-                symbol: '⊕',
-                description: 'Organelles, plant vs animal cells, membrane transport',
-                to: '/biology/cell-structure',
-            },
-            {
-                id: 'cell-division',
-                title: 'Cell Division',
-                symbol: '⊕→⊕',
-                description: 'Mitosis, meiosis, and the cell cycle',
-                to: '/biology/cell-division',
-            },
+            { id: 'photosynthesis', title: 'Photosynthesis', description: 'Light reactions, Calvin cycle, and electron transport', to: '/biology/photosynthesis' },
+            { id: 'respiration', title: 'Cellular Respiration', description: 'Glycolysis, Krebs cycle, and oxidative phosphorylation', to: '/biology/respiration' },
         ],
     },
     {
-        number: 3,
-        title: 'Cellular Energetics',
+        name: 'Genetics',
         visualizations: [
-            {
-                id: 'photosynthesis',
-                title: 'Photosynthesis',
-                symbol: 'hν',
-                description: 'Light reactions, Calvin cycle, and electron transport',
-                to: '/biology/photosynthesis',
-            },
-            {
-                id: 'respiration',
-                title: 'Cellular Respiration',
-                symbol: 'ATP',
-                description: 'Glycolysis, Krebs cycle, and oxidative phosphorylation',
-                to: '/biology/respiration',
-            },
+            { id: 'dna', title: 'DNA & Gene Expression', description: 'Replication, transcription, translation, and mutations', to: '/biology/dna' },
         ],
     },
     {
-        number: 5,
-        title: 'Heredity',
+        name: 'Evolution',
         visualizations: [
-            {
-                id: 'dna',
-                title: 'DNA & Gene Expression',
-                symbol: '🧬',
-                description: 'Replication, transcription, translation, and mutations',
-                to: '/biology/dna',
-            },
+            { id: 'evolution', title: 'Evolution & Selection', description: 'Hardy-Weinberg, natural selection, and genetic drift', to: '/biology/evolution' },
         ],
     },
     {
-        number: 7,
-        title: 'Natural Selection',
+        name: 'Ecology',
         visualizations: [
-            {
-                id: 'evolution',
-                title: 'Evolution & Selection',
-                symbol: 'p²+2pq+q²',
-                description: 'Hardy-Weinberg, natural selection, and genetic drift',
-                to: '/biology/evolution',
-            },
-        ],
-    },
-    {
-        number: 8,
-        title: 'Ecology',
-        visualizations: [
-            {
-                id: 'population',
-                title: 'Population Dynamics',
-                symbol: 'dN/dt',
-                description: 'Logistic growth, carrying capacity, and competition',
-                to: '/biology/population',
-            },
-            {
-                id: 'ecology',
-                title: 'Food Webs & Energy',
-                symbol: '⟫',
-                description: 'Trophic levels, energy pyramids, and nutrient cycling',
-                to: '/biology/ecology',
-            },
+            { id: 'population', title: 'Population Dynamics', description: 'Logistic growth, carrying capacity, and competition', to: '/biology/population' },
+            { id: 'ecology', title: 'Food Webs & Energy', description: 'Trophic levels, energy pyramids, and nutrient cycling', to: '/biology/ecology' },
         ],
     },
 ]
 
 export default function BiologyHub() {
-    const trackColor = 'rgb(80, 200, 120)'
-
     return (
-        <div className="min-h-screen relative bg-[#0a1a12]">
-            <BiologyBackground />
+        <div className="min-h-screen relative bg-bg">
+            <BiologyBackground className="opacity-40" />
 
-            <div className="relative z-10 px-8 py-12 max-w-6xl mx-auto">
+            <div className="relative z-10 px-5 sm:px-8 py-10 sm:py-14 max-w-6xl mx-auto">
                 <motion.header
-                    initial={{ opacity: 0, y: -20 }}
+                    initial={{ opacity: 0, y: -16 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.8 }}
-                    className="mb-8"
+                    transition={{ duration: 0.5 }}
+                    className="mb-10"
                 >
-                    <Link to="/" className="inline-flex items-center gap-2 text-white/40 hover:text-white/70 text-sm mb-4 transition-colors">
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                        </svg>
-                        Back to Hub
-                    </Link>
-                    <div className="flex items-center gap-4">
-                        <span className="text-4xl">🧬</span>
-                        <div>
-                            <h1 className="text-4xl md:text-5xl font-light tracking-tight text-white">
-                                AP Biology
-                            </h1>
-                            <p className="text-white/50 text-lg">
-                                Interactive visualizations for AP Biology
-                            </p>
-                        </div>
-                    </div>
+                    <h1 className="text-3xl sm:text-4xl font-light tracking-tight text-text mb-1">
+                        Biology
+                    </h1>
+                    <p className="text-text-secondary text-sm">
+                        Cell biology, energetics, genetics, evolution, and ecology
+                    </p>
                 </motion.header>
 
-                <AnimatePresence mode="wait">
-                    <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.4 }}
-                        className="space-y-8"
-                    >
-                        {units.map((unit, unitIndex) => (
-                            <motion.section
-                                key={unit.number}
-                                initial={{ opacity: 0, y: 20 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ duration: 0.4, delay: unitIndex * 0.1 }}
-                            >
-                                <div className="flex items-center gap-3 mb-4">
-                                    <div
-                                        className="w-8 h-8 rounded-lg flex items-center justify-center text-sm font-bold"
-                                        style={{
-                                            backgroundColor: `${trackColor}20`,
-                                            color: trackColor
-                                        }}
-                                    >
-                                        {unit.number}
-                                    </div>
-                                    <h2 className="text-xl font-medium text-white/80">
-                                        {unit.title}
-                                    </h2>
-                                </div>
+                <div className="space-y-10">
+                    {topics.map((group, gi) => (
+                        <motion.section
+                            key={group.name}
+                            initial={{ opacity: 0, y: 16 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.4, delay: gi * 0.08 }}
+                        >
+                            <h2 className="text-xs font-semibold uppercase tracking-widest text-text-muted mb-4">
+                                {group.name}
+                            </h2>
 
-                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 ml-11">
-                                    {unit.visualizations.map((viz) => (
-                                        <Link key={viz.id} to={viz.to} className="group block">
-                                            <div className="relative overflow-hidden rounded-xl backdrop-blur-xl bg-white/[0.03] border border-white/[0.08] p-5 transition-all duration-300 hover:bg-white/[0.06] hover:border-white/[0.15] hover:shadow-[0_8px_32px_rgba(0,0,0,0.3)]">
-                                                <div
-                                                    className="absolute top-3 right-3 text-2xl font-mono opacity-10 group-hover:opacity-25 transition-opacity"
-                                                    style={{ color: trackColor }}
-                                                >
-                                                    {viz.symbol}
-                                                </div>
-                                                <h3 className="text-lg font-medium mb-1.5 group-hover:text-white transition-colors text-white/90">
-                                                    {viz.title}
-                                                </h3>
-                                                <p className="text-white/50 text-sm leading-relaxed">{viz.description}</p>
-                                                <div className="mt-3 flex items-center text-white/30 text-xs group-hover:text-white/50 transition-colors">
-                                                    <span>Explore</span>
-                                                    <svg className="w-4 h-4 ml-1 transform group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                                                    </svg>
-                                                </div>
-                                            </div>
-                                        </Link>
-                                    ))}
-                                </div>
-                            </motion.section>
-                        ))}
-                    </motion.div>
-                </AnimatePresence>
-
-                <motion.footer
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ delay: 0.8 }}
-                    className="mt-16 text-center text-white/30 text-xs tracking-wider"
-                >
-                    Aligned with College Board AP Biology Curriculum
-                </motion.footer>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                                {group.visualizations.map((viz) => (
+                                    <Link key={viz.id} to={viz.to} className="group block">
+                                        <div className="bg-bg-elevated rounded-[--radius-lg] p-4 shadow-[--shadow-sm] transition-all duration-200 hover:shadow-[--shadow-md] hover:-translate-y-0.5">
+                                            <h3 className="text-sm font-medium text-text mb-1 group-hover:text-text transition-colors">
+                                                {viz.title}
+                                            </h3>
+                                            <p className="text-text-secondary text-xs leading-relaxed">
+                                                {viz.description}
+                                            </p>
+                                        </div>
+                                    </Link>
+                                ))}
+                            </div>
+                        </motion.section>
+                    ))}
+                </div>
             </div>
         </div>
     )

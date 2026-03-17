@@ -335,7 +335,7 @@ export default function MolecularBonds() {
                 </div>
             )}
             {selectedAtom !== null && (
-                <div className="absolute bottom-20 left-1/2 -translate-x-1/2 bg-black/60 backdrop-blur-sm rounded-lg px-4 py-2 text-sm text-white/60 z-10">
+                <div className="absolute bottom-20 left-1/2 -translate-x-1/2 bg-black/70 rounded-lg px-4 py-2 text-sm text-white/60 z-10">
                     Click another atom to create a bond
                 </div>
             )}

@@ -13,7 +13,7 @@ export function ControlPanel({ children, className }: ControlPanelProps) {
             initial={{ opacity: 0, x: -16 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.3, delay: 0.15 }}
-            className={cn('glass p-5 space-y-3', className)}
+            className={cn('bg-bg-elevated rounded-[--radius-lg] shadow-[--shadow-md] p-4 space-y-3', className)}
         >
             {children}
         </motion.div>
@@ -28,7 +28,7 @@ interface ControlGroupProps {
 export function ControlGroup({ label, children }: ControlGroupProps) {
     return (
         <div className="space-y-1.5">
-            <label className="text-xs text-text-secondary font-medium uppercase tracking-wider">{label}</label>
+            <label className="text-[11px] text-text-secondary font-medium uppercase tracking-wider">{label}</label>
             {children}
         </div>
     )
@@ -71,8 +71,8 @@ export function Slider({ value, onChange, min, max, step = 1, label }: SliderPro
         <div className="space-y-1.5">
             {label && (
                 <div className="flex justify-between items-baseline">
-                    <span className="text-xs text-text-secondary">{label}</span>
-                    <span className="text-xs text-text font-mono tabular-nums">{value}</span>
+                    <span className="text-[11px] text-text-secondary">{label}</span>
+                    <span className="text-[11px] text-text font-mono tabular-nums">{value}</span>
                 </div>
             )}
             <input
@@ -82,7 +82,7 @@ export function Slider({ value, onChange, min, max, step = 1, label }: SliderPro
                 min={min}
                 max={max}
                 step={step}
-                className="w-full h-1.5 bg-white/10 rounded-full appearance-none cursor-pointer accent-white"
+                className="w-full h-1 bg-bg-tertiary rounded-full appearance-none cursor-pointer accent-white"
             />
         </div>
     )
@@ -122,7 +122,7 @@ interface ToggleProps {
 export function Toggle({ value, onChange, label, className }: ToggleProps) {
     return (
         <div className={cn('flex items-center justify-between gap-3', className)}>
-            {label && <span className="text-xs text-text-secondary">{label}</span>}
+            {label && <span className="text-[11px] text-text-secondary">{label}</span>}
             <button
                 role="switch"
                 aria-checked={value}
@@ -130,15 +130,15 @@ export function Toggle({ value, onChange, label, className }: ToggleProps) {
                 onClick={() => onChange(!value)}
                 onKeyDown={e => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); onChange(!value) } }}
                 className={cn(
-                    'relative w-10 h-5.5 rounded-full transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-white/40 focus-visible:outline-offset-2',
-                    value ? 'bg-white/30' : 'bg-white/10'
+                    'relative rounded-full transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-white/40 focus-visible:outline-offset-2',
+                    value ? 'bg-white/25' : 'bg-bg-tertiary'
                 )}
-                style={{ width: 40, height: 22 }}
+                style={{ width: 36, height: 20 }}
             >
                 <span
                     className={cn(
-                        'absolute top-0.5 left-0.5 w-[18px] h-[18px] rounded-full bg-white shadow-sm transition-transform duration-200',
-                        value ? 'translate-x-[18px]' : 'translate-x-0'
+                        'absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow-sm transition-transform duration-200',
+                        value ? 'translate-x-4' : 'translate-x-0'
                     )}
                 />
             </button>
@@ -162,11 +162,11 @@ interface SelectProps {
 export function Select({ value, onChange, options, label, className }: SelectProps) {
     return (
         <div className={cn('space-y-1.5', className)}>
-            {label && <span className="text-xs text-text-secondary block uppercase tracking-wider">{label}</span>}
+            {label && <span className="text-[11px] text-text-secondary block uppercase tracking-wider">{label}</span>}
             <select
                 value={value}
                 onChange={e => onChange(e.target.value)}
-                className="w-full bg-bg-elevated border border-border rounded-lg px-3 py-2 text-sm text-white font-mono focus:outline-none focus:border-border-hover focus:ring-1 focus:ring-white/10 transition-colors appearance-none cursor-pointer"
+                className="w-full bg-bg-elevated border border-border rounded-[--radius-md] px-3 py-2 text-sm text-text font-mono focus:outline-none focus:border-border-hover focus:ring-1 focus:ring-white/10 transition-colors appearance-none cursor-pointer"
                 style={{
                     backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='rgba(255,255,255,0.4)' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E")`,
                     backgroundRepeat: 'no-repeat',
@@ -198,8 +198,8 @@ interface ButtonGroupProps {
 export function ButtonGroup({ value, onChange, options, label, className, color }: ButtonGroupProps) {
     return (
         <div className={cn('space-y-1.5', className)}>
-            {label && <span className="text-xs text-text-secondary block uppercase tracking-wider">{label}</span>}
-            <div className="flex rounded-lg overflow-hidden border border-border">
+            {label && <span className="text-[11px] text-text-secondary block uppercase tracking-wider">{label}</span>}
+            <div className="flex rounded-[--radius-md] overflow-hidden bg-bg-tertiary">
                 {options.map((opt) => (
                     <button
                         key={opt.value}
@@ -207,13 +207,10 @@ export function ButtonGroup({ value, onChange, options, label, className, color 
                         className={cn(
                             'flex-1 px-3 py-1.5 text-xs font-medium transition-all duration-150',
                             value === opt.value
-                                ? 'text-white'
-                                : 'text-text-muted hover:text-text-secondary hover:bg-white/5'
+                                ? 'text-white bg-bg-elevated shadow-sm'
+                                : 'text-text-muted hover:text-text-secondary'
                         )}
-                        style={value === opt.value ? {
-                            backgroundColor: color ? `color-mix(in srgb, ${color} 20%, transparent)` : 'rgba(255,255,255,0.12)',
-                            color: color || 'white',
-                        } : undefined}
+                        style={value === opt.value && color ? { color } : undefined}
                     >
                         {opt.label}
                     </button>

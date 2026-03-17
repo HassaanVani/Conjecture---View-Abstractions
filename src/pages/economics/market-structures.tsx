@@ -470,7 +470,7 @@ export default function MarketStructures() {
 
     return (
         <div className="h-[calc(100vh-64px)] flex flex-col bg-[#1a150a]">
-            <div className="flex items-center justify-between px-4 py-2 border-b border-white/10 bg-black/30 backdrop-blur-sm">
+            <div className="flex items-center justify-between px-4 py-2 border-b border-white/10 bg-bg-elevated">
                 <div className="flex items-center gap-3">
                     <h1 className="text-lg font-medium text-white/90">Market Structures</h1>
                     <APTag course="Microeconomics" unit="Unit 4" color={COLOR} />
@@ -521,8 +521,8 @@ export default function MarketStructures() {
                     </div>
                 </div>
 
-                <div className="w-72 bg-black/30 border-l border-white/10 backdrop-blur-sm p-4 flex flex-col gap-4 overflow-y-auto">
-                    <ControlPanel className="!p-0 !bg-transparent !border-0 !backdrop-blur-0">
+                <div className="w-72 bg-black/30 border-l border-white/10 p-4 flex flex-col gap-4 overflow-y-auto">
+                    <ControlPanel className="!p-0 !bg-transparent !border-0">
                         <Select
                             label="Market Structure"
                             value={structure}

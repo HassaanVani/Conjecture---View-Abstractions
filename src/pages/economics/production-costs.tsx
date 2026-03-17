@@ -175,7 +175,7 @@ export default function ProductionCosts() {
                     <DemoMode steps={demoSteps} currentStep={demo.currentStep} isOpen={demo.isOpen} onClose={demo.close} onNext={demo.next} onPrev={demo.prev} onGoToStep={demo.goToStep} departmentColor={ECON_COLOR} />
                 </div>
             </div>
-            <div className="border-t border-white/10 bg-black/30 backdrop-blur-sm px-6 py-4">
+            <div className="border-t border-white/10 bg-bg-elevated px-6 py-4">
                 <div className="max-w-5xl mx-auto flex items-center justify-between gap-4">
                     <Slider label="Labor (L)" value={laborInput} onChange={setLaborInput} min={1} max={40} />
                     <Slider label="Fixed Cost" value={fixedCost} onChange={setFixedCost} min={50} max={200} step={10} />

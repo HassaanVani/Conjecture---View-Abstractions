@@ -37,7 +37,7 @@ export function EconomicsBackground({ className = '' }: BackgroundProps) {
 
             const time = frame * 0.01
 
-            ctx.strokeStyle = 'rgba(220, 180, 80, 0.03)'
+            ctx.strokeStyle = 'rgba(220, 180, 80, 0.015)'
             ctx.lineWidth = 1
             for (let x = 0; x < canvas.width; x += 60) {
                 ctx.beginPath()
@@ -53,7 +53,7 @@ export function EconomicsBackground({ className = '' }: BackgroundProps) {
             }
 
             for (const trend of trends) {
-                ctx.strokeStyle = `rgba(220, 180, 80, 0.08)`
+                ctx.strokeStyle = `rgba(220, 180, 80, 0.03)`
                 ctx.lineWidth = 2
                 ctx.beginPath()
 
@@ -70,7 +70,7 @@ export function EconomicsBackground({ className = '' }: BackgroundProps) {
             }
 
             ctx.font = '16px serif'
-            ctx.fillStyle = 'rgba(220, 180, 80, 0.04)'
+            ctx.fillStyle = 'rgba(220, 180, 80, 0.015)'
             const symbols = ['$', '\u20AC', '\u00A3', '\u00A5', '\u20BF', '%', '\u2191', '\u2193']
             for (let i = 0; i < 12; i++) {
                 const sx = ((i * 97 + frame * 0.2) % (canvas.width + 50)) - 25

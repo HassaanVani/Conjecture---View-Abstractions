@@ -37,7 +37,7 @@ export function BiologyBackground({ className = '' }: BackgroundProps) {
                     const y = row * hexHeight + (col % 2 === 0 ? 0 : hexHeight / 2)
 
                     const breathe = Math.sin(time + col * 0.2 + row * 0.3) * 0.15 + 0.85
-                    const alpha = 0.04 + Math.sin(time * 0.5 + col * 0.1 + row * 0.1) * 0.02
+                    const alpha = 0.02 + Math.sin(time * 0.5 + col * 0.1 + row * 0.1) * 0.01
 
                     ctx.strokeStyle = `rgba(80, 200, 120, ${alpha})`
                     ctx.lineWidth = 1
@@ -54,7 +54,7 @@ export function BiologyBackground({ className = '' }: BackgroundProps) {
                     ctx.stroke()
 
                     if ((col + row) % 4 === 0) {
-                        ctx.fillStyle = `rgba(80, 200, 120, ${0.06 + Math.sin(time + col) * 0.02})`
+                        ctx.fillStyle = `rgba(80, 200, 120, ${0.02 + Math.sin(time + col) * 0.01})`
                         ctx.beginPath()
                         ctx.arc(x, y, 3, 0, Math.PI * 2)
                         ctx.fill()
