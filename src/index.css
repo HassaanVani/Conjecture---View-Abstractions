@@ -1,20 +1,33 @@
 @import "tailwindcss";
 
 @theme {
+  /* Core backgrounds */
   --color-bg: #0a0e1a;
   --color-bg-elevated: #0f1420;
+  --color-bg-tertiary: #161c2e;
+  --color-bg-surface: rgba(255, 255, 255, 0.03);
+
+  /* Node (legacy) */
   --color-node: #2a3040;
   --color-node-hover: #3a4050;
+
+  /* Text hierarchy */
   --color-text: #ffffff;
-  --color-text-muted: rgba(255, 255, 255, 0.4);
-  --color-text-dim: rgba(255, 255, 255, 0.2);
+  --color-text-secondary: rgba(255, 255, 255, 0.6);
+  --color-text-muted: rgba(255, 255, 255, 0.45);
+  --color-text-dim: rgba(255, 255, 255, 0.25);
+
+  /* Functional */
   --color-arrow: rgba(255, 255, 255, 0.35);
   --color-accent-coral: #e85a4f;
   --color-accent-teal: #48b5a0;
-  --color-border: rgba(255, 255, 255, 0.08);
+  --color-border: rgba(255, 255, 255, 0.1);
+  --color-border-hover: rgba(255, 255, 255, 0.2);
+
+  /* Typography */
   --font-display: 'Inter', system-ui, sans-serif;
   --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
-  
+
   /* Department colors */
   --color-math: rgb(100, 140, 255);
   --color-physics: rgb(160, 100, 255);
@@ -63,6 +76,17 @@
 }
 
 @layer components {
+  /* Glass morphism — single source of truth */
+  .glass {
+    @apply backdrop-blur-xl rounded-2xl border border-border;
+    background: rgba(10, 14, 26, 0.65);
+  }
+
+  .glass-subtle {
+    @apply backdrop-blur-lg rounded-xl border border-border;
+    background: rgba(10, 14, 26, 0.5);
+  }
+
   .simulation-canvas {
     @apply fixed inset-0 w-full h-full;
   }
@@ -94,19 +118,25 @@
   }
 
   .control-input {
-    @apply bg-bg-elevated border border-border rounded-lg px-4 py-3 text-text font-mono text-lg focus:outline-none focus:border-text-muted transition-all;
+    @apply bg-bg-elevated border border-border rounded-lg px-4 py-3 text-text font-mono text-base focus:outline-none focus:border-text-muted focus:ring-1 focus:ring-text-muted/30 transition-all;
   }
 
+  /* Buttons */
   .btn-primary {
-    @apply px-6 py-3 rounded-lg font-medium transition-all duration-200 bg-text text-bg;
+    @apply px-5 py-2.5 rounded-lg font-medium text-sm transition-all duration-200 bg-white text-bg;
   }
 
   .btn-primary:hover {
-    background: rgba(255, 255, 255, 0.7);
+    background: rgba(255, 255, 255, 0.85);
+    box-shadow: 0 2px 12px rgba(255, 255, 255, 0.1);
+  }
+
+  .btn-primary:active {
+    transform: scale(0.97);
   }
 
   .btn-secondary {
-    @apply px-6 py-3 rounded-lg font-medium transition-all duration-200 text-text-muted;
+    @apply px-5 py-2.5 rounded-lg font-medium text-sm transition-all duration-200 text-text-secondary;
     background: rgba(255, 255, 255, 0.06);
     border: 1px solid rgba(255, 255, 255, 0.1);
   }
@@ -117,32 +147,49 @@
     border-color: rgba(255, 255, 255, 0.2);
   }
 
+  .btn-secondary:active {
+    transform: scale(0.97);
+  }
+
   .btn-ghost {
-    @apply px-6 py-3 rounded-lg font-medium transition-all duration-200 bg-transparent text-text-muted;
+    @apply px-5 py-2.5 rounded-lg font-medium text-sm transition-all duration-200 bg-transparent text-text-muted;
   }
 
   .btn-ghost:hover {
-    @apply text-text bg-border;
+    @apply text-text;
+    background: rgba(255, 255, 255, 0.06);
   }
 
+  /* Focus ring for all interactive elements */
+  .btn-primary:focus-visible,
+  .btn-secondary:focus-visible,
+  .btn-ghost:focus-visible,
+  .control-input:focus-visible {
+    outline: 2px solid rgba(255, 255, 255, 0.4);
+    outline-offset: 2px;
+  }
+
+  /* Cards */
   .hub-card {
-    @apply relative p-8 rounded-2xl cursor-pointer transition-all duration-300;
-    background: linear-gradient(135deg, rgba(255, 255, 255, 0.02) 0%, transparent 100%);
+    @apply relative p-6 rounded-2xl cursor-pointer transition-all duration-300;
+    background: rgba(255, 255, 255, 0.02);
     border: 1px solid var(--color-border);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
   }
 
   .hub-card:hover {
-    background: linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.02) 100%);
-    border-color: rgba(255, 255, 255, 0.15);
+    background: rgba(255, 255, 255, 0.05);
+    border-color: var(--color-border-hover);
     transform: translateY(-2px);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
   }
 
   .hub-card-title {
-    @apply text-xl font-medium text-text mb-2;
+    @apply text-lg font-medium text-text mb-1.5;
   }
 
   .hub-card-desc {
-    @apply text-sm text-text-muted leading-relaxed;
+    @apply text-sm text-text-secondary leading-relaxed;
   }
 }
 

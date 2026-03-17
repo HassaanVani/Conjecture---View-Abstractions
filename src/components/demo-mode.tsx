@@ -5,9 +5,7 @@ import { cn } from '@/lib/utils'
 export interface DemoStep {
     title: string
     description: string
-    /** Callback to configure the visualization for this step */
     setup?: () => void
-    /** Optional highlight region or annotation hint */
     highlight?: string
 }
 
@@ -45,34 +43,35 @@ export function DemoMode({
     return (
         <AnimatePresence>
             <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: 20 }}
-                transition={{ duration: 0.3 }}
+                initial={{ opacity: 0, y: 20, scale: 0.96 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: 20, scale: 0.96 }}
+                transition={{ duration: 0.25 }}
                 className={cn(
-                    'backdrop-blur-xl bg-black/60 border border-white/15 rounded-2xl p-5 max-w-md w-full',
+                    'glass max-w-md w-full shadow-2xl shadow-black/30',
                     className
                 )}
             >
                 {/* Header */}
-                <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center justify-between px-5 pt-4 pb-3">
                     <div className="flex items-center gap-2">
                         <span
-                            className="text-xs font-medium px-2 py-0.5 rounded-md"
+                            className="text-[10px] font-semibold px-2 py-0.5 rounded-md tracking-wider uppercase"
                             style={{
-                                backgroundColor: `${departmentColor}20`,
+                                backgroundColor: `color-mix(in srgb, ${departmentColor} 15%, transparent)`,
                                 color: departmentColor,
                             }}
                         >
                             {title}
                         </span>
-                        <span className="text-white/30 text-xs">
-                            {currentStep + 1} / {steps.length}
+                        <span className="text-text-dim text-xs tabular-nums">
+                            {currentStep + 1}/{steps.length}
                         </span>
                     </div>
                     <button
                         onClick={onClose}
-                        className="text-white/30 hover:text-white/60 transition-colors p-1"
+                        className="text-text-dim hover:text-text-secondary transition-colors p-1 rounded-md hover:bg-white/5"
+                        aria-label="Close tutorial"
                     >
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -80,84 +79,73 @@ export function DemoMode({
                     </button>
                 </div>
 
-                {/* Progress bar */}
-                <div className="flex gap-1 mb-4">
+                {/* Progress */}
+                <div className="flex gap-0.5 px-5 mb-4">
                     {steps.map((_, i) => (
                         <button
                             key={i}
                             onClick={() => onGoToStep(i)}
-                            className="flex-1 h-1 rounded-full transition-colors cursor-pointer"
+                            className="flex-1 h-1 rounded-full transition-colors cursor-pointer hover:opacity-80"
                             style={{
-                                backgroundColor: i <= currentStep ? departmentColor : 'rgba(255,255,255,0.1)',
+                                backgroundColor: i <= currentStep ? departmentColor : 'rgba(255,255,255,0.08)',
                             }}
+                            aria-label={`Go to step ${i + 1}`}
                         />
                     ))}
                 </div>
 
                 {/* Content */}
-                <AnimatePresence mode="wait">
-                    <motion.div
-                        key={currentStep}
-                        initial={{ opacity: 0, x: 10 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        exit={{ opacity: 0, x: -10 }}
-                        transition={{ duration: 0.2 }}
-                    >
-                        <h3 className="text-lg font-medium text-white mb-2">{step.title}</h3>
-                        <p className="text-white/60 text-sm leading-relaxed">{step.description}</p>
-                        {step.highlight && (
-                            <p className="mt-2 text-xs italic" style={{ color: departmentColor }}>
-                                {step.highlight}
-                            </p>
-                        )}
-                    </motion.div>
-                </AnimatePresence>
+                <div className="px-5 pb-2">
+                    <AnimatePresence mode="wait">
+                        <motion.div
+                            key={currentStep}
+                            initial={{ opacity: 0, x: 8 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            exit={{ opacity: 0, x: -8 }}
+                            transition={{ duration: 0.15 }}
+                        >
+                            <h3 className="text-base font-medium text-white mb-1.5">{step.title}</h3>
+                            <p className="text-text-secondary text-sm leading-relaxed">{step.description}</p>
+                            {step.highlight && (
+                                <p className="mt-2 text-[11px] italic" style={{ color: departmentColor }}>
+                                    {step.highlight}
+                                </p>
+                            )}
+                        </motion.div>
+                    </AnimatePresence>
+                </div>
 
                 {/* Navigation */}
-                <div className="flex items-center justify-between mt-5">
+                <div className="flex items-center justify-between px-5 pb-4 pt-3">
                     <button
                         onClick={onPrev}
                         disabled={isFirst}
                         className={cn(
-                            'px-4 py-2 rounded-lg text-sm font-medium transition-all',
+                            'px-4 py-1.5 rounded-lg text-sm font-medium transition-all',
                             isFirst
-                                ? 'text-white/20 cursor-not-allowed'
-                                : 'text-white/60 hover:text-white hover:bg-white/10'
+                                ? 'text-text-dim cursor-not-allowed'
+                                : 'text-text-muted hover:text-text hover:bg-white/5'
                         )}
                     >
-                        Previous
+                        Prev
                     </button>
 
-                    {isLast ? (
-                        <button
-                            onClick={onClose}
-                            className="px-5 py-2 rounded-lg text-sm font-medium transition-all"
-                            style={{
-                                backgroundColor: `${departmentColor}30`,
-                                color: departmentColor,
-                            }}
-                        >
-                            Finish
-                        </button>
-                    ) : (
-                        <button
-                            onClick={onNext}
-                            className="px-5 py-2 rounded-lg text-sm font-medium transition-all"
-                            style={{
-                                backgroundColor: `${departmentColor}30`,
-                                color: departmentColor,
-                            }}
-                        >
-                            Next
-                        </button>
-                    )}
+                    <button
+                        onClick={isLast ? onClose : onNext}
+                        className="px-5 py-1.5 rounded-lg text-sm font-medium transition-all"
+                        style={{
+                            backgroundColor: `color-mix(in srgb, ${departmentColor} 20%, transparent)`,
+                            color: departmentColor,
+                        }}
+                    >
+                        {isLast ? 'Finish' : 'Next'}
+                    </button>
                 </div>
             </motion.div>
         </AnimatePresence>
     )
 }
 
-/** Hook for managing demo mode state */
 export function useDemoMode(steps: DemoStep[]) {
     const [isOpen, setIsOpen] = useState(false)
     const [currentStep, setCurrentStep] = useState(0)

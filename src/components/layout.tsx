@@ -8,26 +8,32 @@ interface LayoutProps {
 
 export default function Layout({ children }: LayoutProps) {
     const location = useLocation()
-    const isSimulation = location.pathname !== '/'
+    const isHome = location.pathname === '/'
+    const segments = location.pathname.split('/').filter(Boolean)
+    const isSubjectHub = segments.length === 1
+    const parentPath = isSubjectHub ? '/' : `/${segments[0]}`
+    const parentLabel = isSubjectHub ? 'Home' : segments[0].charAt(0).toUpperCase() + segments[0].slice(1)
 
     return (
         <div className="min-h-screen bg-bg">
-            {isSimulation && (
-                <header className="fixed top-0 left-0 right-0 z-50 bg-bg/80 backdrop-blur-sm border-b border-border">
-                    <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-                        <Link to="/" className="flex items-center gap-3 hover:opacity-80 transition-opacity">
-                            <span className="text-lg font-medium">Conjecture</span>
-                            <span className="text-xs text-text-dim tracking-wider">View Abstractions</span>
-                        </Link>
+            {!isHome && (
+                <header className="fixed top-0 left-0 right-0 z-50 bg-bg/80 backdrop-blur-md border-b border-border">
+                    <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                            <Link to="/" className="flex items-center gap-2.5 hover:opacity-80 transition-opacity">
+                                <span className="text-base font-semibold tracking-tight">Conjecture</span>
+                                <span className="text-[10px] text-text-dim tracking-widest uppercase hidden sm:inline">View Abstractions</span>
+                            </Link>
+                        </div>
 
                         <Link
-                            to="/"
-                            className="flex items-center gap-2 text-text-muted hover:text-text transition-colors text-sm"
+                            to={parentPath}
+                            className="flex items-center gap-2 text-text-secondary hover:text-text transition-colors text-sm focus-visible:outline-2 focus-visible:outline-white/40 focus-visible:outline-offset-2 rounded-lg px-2 py-1"
                         >
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
                             </svg>
-                            Exit
+                            <span className="hidden sm:inline">{parentLabel}</span>
                         </Link>
                     </div>
                 </header>
@@ -37,8 +43,8 @@ export default function Layout({ children }: LayoutProps) {
                 key={location.pathname}
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                transition={{ duration: 0.3 }}
-                className={isSimulation ? 'pt-16' : ''}
+                transition={{ duration: 0.25 }}
+                className={!isHome ? 'pt-16' : ''}
             >
                 {children}
             </motion.main>

@@ -10,10 +10,10 @@ interface ControlPanelProps {
 export function ControlPanel({ children, className }: ControlPanelProps) {
     return (
         <motion.div
-            initial={{ opacity: 0, x: -20 }}
+            initial={{ opacity: 0, x: -16 }}
             animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.3, delay: 0.2 }}
-            className={cn('glass rounded-2xl p-6 space-y-4', className)}
+            transition={{ duration: 0.3, delay: 0.15 }}
+            className={cn('glass p-5 space-y-3', className)}
         >
             {children}
         </motion.div>
@@ -27,8 +27,8 @@ interface ControlGroupProps {
 
 export function ControlGroup({ label, children }: ControlGroupProps) {
     return (
-        <div className="space-y-2">
-            <label className="text-sm text-text-secondary font-medium">{label}</label>
+        <div className="space-y-1.5">
+            <label className="text-xs text-text-secondary font-medium uppercase tracking-wider">{label}</label>
             {children}
         </div>
     )
@@ -52,7 +52,7 @@ export function NumberInput({ value, onChange, min = 1, max = 1000000, placehold
             min={min}
             max={max}
             placeholder={placeholder}
-            className={cn('control-input w-full', className)}
+            className={cn('control-input w-full text-sm', className)}
         />
     )
 }
@@ -68,11 +68,11 @@ interface SliderProps {
 
 export function Slider({ value, onChange, min, max, step = 1, label }: SliderProps) {
     return (
-        <div className="space-y-2">
+        <div className="space-y-1.5">
             {label && (
-                <div className="flex justify-between text-sm">
-                    <span className="text-text-secondary">{label}</span>
-                    <span className="text-text-primary font-mono">{value}</span>
+                <div className="flex justify-between items-baseline">
+                    <span className="text-xs text-text-secondary">{label}</span>
+                    <span className="text-xs text-text font-mono tabular-nums">{value}</span>
                 </div>
             )}
             <input
@@ -82,7 +82,7 @@ export function Slider({ value, onChange, min, max, step = 1, label }: SliderPro
                 min={min}
                 max={max}
                 step={step}
-                className="w-full h-2 bg-bg-tertiary rounded-lg appearance-none cursor-pointer accent-accent-blue"
+                className="w-full h-1.5 bg-white/10 rounded-full appearance-none cursor-pointer accent-white"
             />
         </div>
     )
@@ -103,7 +103,7 @@ export function Button({ onClick, children, variant = 'primary', disabled, class
             disabled={disabled}
             className={cn(
                 variant === 'primary' ? 'btn-primary' : 'btn-secondary',
-                'disabled:opacity-50 disabled:cursor-not-allowed',
+                'disabled:opacity-40 disabled:cursor-not-allowed disabled:pointer-events-none',
                 className
             )}
         >
@@ -111,7 +111,6 @@ export function Button({ onClick, children, variant = 'primary', disabled, class
         </button>
     )
 }
-
 
 interface ToggleProps {
     value: boolean
@@ -122,8 +121,8 @@ interface ToggleProps {
 
 export function Toggle({ value, onChange, label, className }: ToggleProps) {
     return (
-        <div className={cn('flex items-center justify-between', className)}>
-            {label && <span className="text-sm text-white/60">{label}</span>}
+        <div className={cn('flex items-center justify-between gap-3', className)}>
+            {label && <span className="text-xs text-text-secondary">{label}</span>}
             <button
                 role="switch"
                 aria-checked={value}
@@ -131,14 +130,15 @@ export function Toggle({ value, onChange, label, className }: ToggleProps) {
                 onClick={() => onChange(!value)}
                 onKeyDown={e => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); onChange(!value) } }}
                 className={cn(
-                    'relative w-11 h-6 rounded-full transition-colors duration-200',
-                    value ? 'bg-blue-500/60' : 'bg-white/10'
+                    'relative w-10 h-5.5 rounded-full transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-white/40 focus-visible:outline-offset-2',
+                    value ? 'bg-white/30' : 'bg-white/10'
                 )}
+                style={{ width: 40, height: 22 }}
             >
                 <span
                     className={cn(
-                        'absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white transition-transform duration-200',
-                        value ? 'translate-x-5' : 'translate-x-0'
+                        'absolute top-0.5 left-0.5 w-[18px] h-[18px] rounded-full bg-white shadow-sm transition-transform duration-200',
+                        value ? 'translate-x-[18px]' : 'translate-x-0'
                     )}
                 />
             </button>
@@ -161,12 +161,12 @@ interface SelectProps {
 
 export function Select({ value, onChange, options, label, className }: SelectProps) {
     return (
-        <div className={cn('space-y-2', className)}>
-            {label && <span className="text-sm text-white/60 block">{label}</span>}
+        <div className={cn('space-y-1.5', className)}>
+            {label && <span className="text-xs text-text-secondary block uppercase tracking-wider">{label}</span>}
             <select
                 value={value}
                 onChange={e => onChange(e.target.value)}
-                className="w-full bg-bg-elevated border border-white/10 rounded-lg px-3 py-2 text-sm text-white font-mono focus:outline-none focus:border-white/30 transition-colors appearance-none cursor-pointer"
+                className="w-full bg-bg-elevated border border-border rounded-lg px-3 py-2 text-sm text-white font-mono focus:outline-none focus:border-border-hover focus:ring-1 focus:ring-white/10 transition-colors appearance-none cursor-pointer"
                 style={{
                     backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='rgba(255,255,255,0.4)' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E")`,
                     backgroundRepeat: 'no-repeat',
@@ -197,21 +197,21 @@ interface ButtonGroupProps {
 
 export function ButtonGroup({ value, onChange, options, label, className, color }: ButtonGroupProps) {
     return (
-        <div className={cn('space-y-2', className)}>
-            {label && <span className="text-sm text-white/60 block">{label}</span>}
-            <div className="flex rounded-lg overflow-hidden border border-white/10">
+        <div className={cn('space-y-1.5', className)}>
+            {label && <span className="text-xs text-text-secondary block uppercase tracking-wider">{label}</span>}
+            <div className="flex rounded-lg overflow-hidden border border-border">
                 {options.map((opt) => (
                     <button
                         key={opt.value}
                         onClick={() => onChange(opt.value)}
                         className={cn(
-                            'flex-1 px-3 py-2 text-xs font-medium transition-all duration-200',
+                            'flex-1 px-3 py-1.5 text-xs font-medium transition-all duration-150',
                             value === opt.value
                                 ? 'text-white'
-                                : 'text-white/40 hover:text-white/70 hover:bg-white/5'
+                                : 'text-text-muted hover:text-text-secondary hover:bg-white/5'
                         )}
                         style={value === opt.value ? {
-                            backgroundColor: color ? `${color}30` : 'rgba(255,255,255,0.15)',
+                            backgroundColor: color ? `color-mix(in srgb, ${color} 20%, transparent)` : 'rgba(255,255,255,0.12)',
                             color: color || 'white',
                         } : undefined}
                     >
