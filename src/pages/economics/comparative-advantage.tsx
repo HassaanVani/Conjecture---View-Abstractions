@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { motion } from 'framer-motion'
 import { EquationDisplay } from '@/components/equation-display'
 import { InfoPanel, APTag } from '@/components/info-panel'
 import { DemoMode, useDemoMode, type DemoStep } from '@/components/demo-mode'

@@ -112,25 +112,6 @@ export function Button({ onClick, children, variant = 'primary', disabled, class
     )
 }
 
-interface VisualizationContainerProps {
-    children: ReactNode
-    className?: string
-}
-
-export function VisualizationContainer({ children, className }: VisualizationContainerProps) {
-    return (
-        <motion.div
-            initial={{ opacity: 0, scale: 0.98 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.4, delay: 0.1 }}
-            className={cn('glass rounded-2xl p-8 min-h-[500px] relative overflow-hidden', className)}
-        >
-            {children}
-        </motion.div>
-    )
-}
-
-// New components for Phase 0
 
 interface ToggleProps {
     value: boolean
@@ -144,7 +125,11 @@ export function Toggle({ value, onChange, label, className }: ToggleProps) {
         <div className={cn('flex items-center justify-between', className)}>
             {label && <span className="text-sm text-white/60">{label}</span>}
             <button
+                role="switch"
+                aria-checked={value}
+                aria-label={label}
                 onClick={() => onChange(!value)}
+                onKeyDown={e => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); onChange(!value) } }}
                 className={cn(
                     'relative w-11 h-6 rounded-full transition-colors duration-200',
                     value ? 'bg-blue-500/60' : 'bg-white/10'

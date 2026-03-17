@@ -1,6 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
-import { ControlPanel, ControlGroup, Slider, Select, Toggle, Button } from '@/components/control-panel'
-import { EquationDisplay } from '@/components/equation-display'
+import { ControlGroup, Slider, Select, Toggle, Button } from '@/components/control-panel'
 import { InfoPanel, APTag } from '@/components/info-panel'
 import { DemoMode, useDemoMode } from '@/components/demo-mode'
 import type { DemoStep } from '@/components/demo-mode'
@@ -170,7 +169,7 @@ export default function VSEPR() {
       const sorted = [...projected].sort((a, b) => a.z - b.z)
 
       // Draw bonds and atoms
-      sorted.forEach((p, i) => {
+      sorted.forEach((p, _i) => {
         // Bond line
         ctx.strokeStyle = p.isLone ? 'rgba(100,180,255,0.3)' : 'rgba(255,160,80,0.5)'
         ctx.lineWidth = p.isLone ? 1.5 : 3

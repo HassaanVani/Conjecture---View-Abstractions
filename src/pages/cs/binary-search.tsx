@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { motion } from 'framer-motion'
 import { generateSortedArray, binarySearch } from '@/lib/utils'
 import { ControlPanel, ControlGroup, Slider, Button, Toggle } from '@/components/control-panel'
@@ -7,7 +7,7 @@ import { InfoPanel, APTag } from '@/components/info-panel'
 import { DemoMode, useDemoMode } from '@/components/demo-mode'
 import type { DemoStep } from '@/components/demo-mode'
 
-const CS_COLOR = 'rgb(34, 211, 238)'
+const CS_TEAL = 'rgb(80, 200, 220)'
 
 interface SearchStep {
     left: number
@@ -103,29 +103,70 @@ export default function BinarySearch() {
 
     const step = steps[Math.min(currentStep, steps.length - 1)]
 
-    // Complexity calculations
-    const bestCase = 1
-    const worstCase = Math.ceil(Math.log2(arraySize)) + 1
-    const avgCase = Math.ceil(Math.log2(arraySize))
-    const linearWorst = arraySize
+    // Derived info values
+    const worstCase = Math.floor(Math.log2(arraySize)) + 1
+    const comparisonsMade = steps.length > 0 ? Math.min(currentStep + 1, steps.length) : 0
+    const elementsEliminated = step && currentStep >= 0
+        ? arraySize - (step.right - step.left + 1)
+        : 0
+    const searchRange = step && currentStep >= 0
+        ? `[${step.left}, ${step.right}]`
+        : `[0, ${arraySize - 1}]`
 
-    const demoSteps: DemoStep[] = [
-        { title: 'Binary Search', description: 'Binary search finds a target in a sorted array by repeatedly halving the search space. It is much faster than checking each element.', setup: () => { setArraySize(15); setShowLinear(false) } },
-        { title: 'How It Works', description: 'Compare the target to the middle element. If target < mid, search the left half. If target > mid, search the right half.', setup: () => { setArraySize(15); setShowLinear(false) } },
-        { title: 'Best Case: O(1)', description: 'If the target is exactly the middle element, we find it in one comparison. This is the best case scenario.', setup: () => { setArraySize(15); setShowLinear(false) } },
-        { title: 'Worst Case: O(log n)', description: `For an array of ${arraySize} elements, the worst case is ${worstCase} comparisons (log2(${arraySize}) + 1). Each step halves the remaining elements.`, setup: () => { setArraySize(15) } },
-        { title: 'vs Linear Search', description: 'Linear search checks each element one by one: O(n) worst case. For 15 elements, that is up to 15 checks vs 4 for binary search.', highlight: 'Enable "Show Linear" to compare side by side.', setup: () => { setShowLinear(true); setArraySize(15) } },
-        { title: 'Logarithmic Growth', description: 'Doubling the array size adds only ONE more step. 1000 elements? Only ~10 steps. 1 million? Only ~20. This is the power of O(log n).', setup: () => { setArraySize(25); setShowLinear(true) } },
-        { title: 'Precondition: Sorted', description: 'Binary search REQUIRES a sorted array. On unsorted data, you must sort first (O(n log n)) or use linear search.', setup: () => { setArraySize(15); setShowLinear(false) } },
-        { title: 'Try It Yourself', description: 'Enter a custom target, adjust array size, and watch the algorithm narrow down. Count the comparisons!', setup: () => { setArraySize(20); setShowLinear(true) } },
-    ]
+    const demoSteps: DemoStep[] = useMemo(() => [
+        {
+            title: 'Sorted Array Prerequisite',
+            description: 'Binary search REQUIRES a sorted array. The algorithm depends on ordering to decide which half to discard. On unsorted data, you must sort first or fall back to linear search.',
+            setup: () => { setArraySize(15); setShowLinear(false); reset() },
+        },
+        {
+            title: 'Divide and Conquer',
+            description: 'Binary search divides the problem in half at every step. Compare the target to the middle element, then eliminate the half that cannot contain it.',
+            setup: () => { setArraySize(15); setShowLinear(false); reset() },
+        },
+        {
+            title: 'Mid Calculation',
+            description: 'The midpoint is calculated as mid = (left + right) / 2 (integer division). This picks the center of the current search range.',
+            highlight: 'Watch the orange-highlighted element — that is the current mid.',
+            setup: () => { setArraySize(15); setShowLinear(false); reset() },
+        },
+        {
+            title: 'The Comparison',
+            description: 'If target == array[mid], we are done. If target < array[mid], search the left half. If target > array[mid], search the right half.',
+            setup: () => { setArraySize(15); setShowLinear(false); reset() },
+        },
+        {
+            title: 'Narrowing the Range',
+            description: 'Each comparison eliminates roughly half the remaining elements. The search range shrinks from [0, n-1] down to a single element or an empty range.',
+            highlight: 'Dimmed elements have been eliminated from consideration.',
+            setup: () => { setArraySize(15); setShowLinear(false); reset() },
+        },
+        {
+            title: 'Best / Average / Worst Case',
+            description: `Best case O(1): target is the first midpoint. Average and worst case O(log n): for ${arraySize} elements, at most ${worstCase} comparisons. Each step halves the remaining elements.`,
+            setup: () => { setArraySize(15); setShowLinear(false); reset() },
+        },
+        {
+            title: 'Binary vs Linear Search',
+            description: `Linear search checks every element: O(n) worst case (up to ${arraySize} checks). Binary search needs at most ${worstCase}. The gap grows dramatically with array size.`,
+            highlight: 'Enable "Show Linear Search" to compare side by side.',
+            setup: () => { setShowLinear(true); setArraySize(15); reset() },
+        },
+        {
+            title: 'Logarithmic Growth',
+            description: 'Doubling the array adds only ONE more comparison. 1,000 elements? ~10 steps. 1,000,000 elements? ~20 steps. This is the power of O(log n).',
+            highlight: 'Try increasing the array size to see how comparisons barely change.',
+            setup: () => { setArraySize(25); setShowLinear(true); reset() },
+        },
+    ], [arraySize, worstCase])
 
     const demo = useDemoMode(demoSteps)
 
     return (
         <div className="h-[calc(100vh-64px)] flex flex-col bg-[#0a1a1a]">
-            <div className="flex-1 relative flex">
-                <div className="flex-1 flex flex-col items-center justify-center gap-6 p-8">
+            <div className="flex-1 relative">
+                {/* Visualization area */}
+                <div className="w-full h-full flex flex-col items-center justify-center gap-6 p-8">
                     <div className="text-center">
                         <p className="text-text-dim mb-1 text-sm">Target</p>
                         <p className="text-4xl font-mono text-accent-coral">{target}</p>
@@ -224,24 +265,10 @@ export default function BinarySearch() {
                             Not found in array
                         </motion.p>
                     )}
-
-                    {/* Complexity annotations */}
-                    <div className="absolute top-4 left-4 space-y-3 w-64">
-                        <APTag course="CS A" unit="Unit 7" color={CS_COLOR} />
-                        <EquationDisplay
-                            departmentColor={CS_COLOR}
-                            title="Complexity"
-                            equations={[
-                                { label: 'Best', expression: 'O(1)', description: 'Target at midpoint' },
-                                { label: 'Average', expression: 'O(log n)', description: `~ ${avgCase} comparisons` },
-                                { label: 'Worst', expression: 'O(log n)', description: `<= ${worstCase} comparisons` },
-                                ...(showLinear ? [{ label: 'Linear', expression: 'O(n)', description: `Up to ${linearWorst} comparisons` }] : []),
-                            ]}
-                        />
-                    </div>
                 </div>
 
-                <div className="w-60 bg-[#0a1a1a]/90 border-l border-white/10 p-4 flex flex-col gap-3 overflow-y-auto z-20">
+                {/* Top-left: Controls + APTag */}
+                <div className="absolute top-4 left-4 space-y-3 max-w-[260px]">
                     <ControlPanel>
                         <ControlGroup label="Target Value">
                             <input
@@ -252,8 +279,8 @@ export default function BinarySearch() {
                                 disabled={isAnimating}
                             />
                         </ControlGroup>
-                        <Slider label={`Array Size: ${arraySize}`} value={arraySize} onChange={setArraySize} min={10} max={25} />
-                        <Slider label={`Speed: ${speed}ms`} value={1700 - speed} onChange={v => setSpeed(1700 - v)} min={200} max={1500} step={100} />
+                        <Slider label="Array Size" value={arraySize} onChange={setArraySize} min={10} max={25} />
+                        <Slider label="Speed" value={1700 - speed} onChange={v => setSpeed(1700 - v)} min={200} max={1500} step={100} />
                         <Toggle label="Show Linear Search" value={showLinear} onChange={setShowLinear} />
                         <div className="flex gap-2">
                             <Button onClick={start} disabled={isAnimating}>
@@ -265,39 +292,51 @@ export default function BinarySearch() {
                                 </Button>
                             )}
                         </div>
-                        <div className="flex gap-2">
+                        <div className="flex gap-2 flex-wrap">
                             <Button onClick={generateArray} variant="secondary">New Array</Button>
                             <Button onClick={reset} variant="secondary">Reset</Button>
                         </div>
                         <Button onClick={demo.open} variant="secondary">AP Tutorial</Button>
                     </ControlPanel>
+                    <APTag course="CS A" unit="Unit 7" color={CS_TEAL} />
+                </div>
 
+                {/* Top-right: InfoPanel + EquationDisplay */}
+                <div className="absolute top-4 right-4 space-y-3 max-w-[240px]">
                     <InfoPanel
                         title="Search State"
-                        departmentColor={CS_COLOR}
+                        departmentColor={CS_TEAL}
                         items={[
                             { label: 'Array Size', value: arraySize },
-                            { label: 'Binary Steps', value: steps.length > 0 ? `${Math.min(currentStep + 1, steps.length)} / ${steps.length}` : '--' },
-                            ...(showLinear ? [{ label: 'Linear Steps', value: linearStep >= 0 ? `${linearStep + 1}` : '--' }] : []),
-                            { label: 'Best Case', value: `${bestCase}`, color: 'rgb(80, 200, 120)' },
-                            { label: 'Worst Case', value: `${worstCase}` },
-                            { label: 'log2(n)', value: Math.log2(arraySize).toFixed(2) },
+                            { label: 'Comparisons Made', value: comparisonsMade > 0 ? `${comparisonsMade} / ${steps.length}` : '--' },
+                            { label: 'Elements Eliminated', value: comparisonsMade > 0 ? elementsEliminated : '--' },
+                            { label: 'Current Search Range', value: searchRange },
+                        ]}
+                    />
+                    <EquationDisplay
+                        departmentColor={CS_TEAL}
+                        title="Complexity"
+                        collapsed
+                        equations={[
+                            { label: 'Time', expression: 'O(log n)', description: 'Time complexity' },
+                            { label: 'Max', expression: `⌊log₂(${arraySize})⌋ + 1 = ${worstCase}`, description: 'Max comparisons' },
                         ]}
                     />
                 </div>
-            </div>
 
-            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-30">
-                <DemoMode
-                    steps={demoSteps}
-                    currentStep={demo.currentStep}
-                    isOpen={demo.isOpen}
-                    onClose={demo.close}
-                    onNext={demo.next}
-                    onPrev={demo.prev}
-                    onGoToStep={demo.goToStep}
-                    departmentColor={CS_COLOR}
-                />
+                {/* Bottom center: DemoMode */}
+                <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-40">
+                    <DemoMode
+                        steps={demoSteps}
+                        currentStep={demo.currentStep}
+                        isOpen={demo.isOpen}
+                        onClose={demo.close}
+                        onNext={demo.next}
+                        onPrev={demo.prev}
+                        onGoToStep={demo.goToStep}
+                        departmentColor={CS_TEAL}
+                    />
+                </div>
             </div>
         </div>
     )

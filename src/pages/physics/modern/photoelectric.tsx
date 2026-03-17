@@ -5,7 +5,7 @@ import { EquationDisplay } from '@/components/equation-display'
 import { InfoPanel, APTag } from '@/components/info-panel'
 import { DemoMode, useDemoMode } from '@/components/demo-mode'
 import type { DemoStep } from '@/components/demo-mode'
-import { Slider, Button, Toggle, Select } from '@/components/control-panel'
+import { Slider, Toggle, Select } from '@/components/control-panel'
 
 const COLOR = 'rgb(160, 100, 255)'
 

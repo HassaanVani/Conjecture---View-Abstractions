@@ -1,5 +1,9 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
+import { ControlPanel, ControlGroup, Slider, Button, Select, ButtonGroup } from '@/components/control-panel'
+import { EquationDisplay } from '@/components/equation-display'
+import { InfoPanel, APTag } from '@/components/info-panel'
+import { DemoMode, useDemoMode } from '@/components/demo-mode'
+import type { DemoStep } from '@/components/demo-mode'
 
 interface CurrencyPair {
     name: string
@@ -34,14 +38,14 @@ const shocks: Record<Shock, ShockInfo> = {
     inflation: { name: 'High Inflation', demandShift: -15, supplyShift: 10, description: 'Inflation erodes value → currency depreciates (PPP).' },
 }
 
+const GOLD = 'rgb(220, 180, 80)'
+
 export default function ForeignExchange() {
     const canvasRef = useRef<HTMLCanvasElement>(null)
     const [selectedPair, setSelectedPair] = useState(0)
     const [demandShift, setDemandShift] = useState(0)
     const [supplyShift, setSupplyShift] = useState(0)
     const [shock, setShock] = useState<Shock>('none')
-    const [showDemo, setShowDemo] = useState(false)
-    const [demoStep, setDemoStep] = useState(0)
 
     const pair = currencyPairs[selectedPair]
 
@@ -50,6 +54,11 @@ export default function ForeignExchange() {
         setDemandShift(shocks[s].demandShift)
         setSupplyShift(shocks[s].supplyShift)
     }, [])
+
+    const reset = useCallback(() => {
+        applyShock('none')
+        setSelectedPair(0)
+    }, [applyShock])
 
     // Calculate equilibrium exchange rate
     const demandIntercept = 120 + demandShift
@@ -68,44 +77,55 @@ export default function ForeignExchange() {
     const isAppreciating = exchangeChange > 0.5
     const isDepreciating = exchangeChange < -0.5
 
-    const demoSteps = [
+    const demoSteps: DemoStep[] = useMemo(() => [
         {
             title: 'The Foreign Exchange Market',
             description: 'Currencies are traded in the forex market. The exchange rate is the price of one currency in terms of another, determined by supply and demand.',
-            action: () => applyShock('none'),
-        },
-        {
-            title: 'Demand for Currency',
-            description: 'Demand for a currency comes from: foreigners buying our exports, foreign investors buying our assets, tourists visiting us.',
-            action: () => { applyShock('none'); setDemandShift(15) },
+            setup: () => { reset(); },
         },
         {
             title: 'Supply of Currency',
-            description: 'Supply comes from: our residents buying imports, our investors buying foreign assets, our tourists traveling abroad.',
-            action: () => { applyShock('none'); setSupplyShift(15) },
+            description: 'Supply comes from: our residents buying imports, our investors buying foreign assets, our tourists traveling abroad. More supply = depreciation.',
+            setup: () => { applyShock('none'); setSupplyShift(15); },
         },
         {
-            title: 'Interest Rate Effects',
-            description: 'Higher interest rates attract capital inflows → demand for currency rises → appreciation. This is why Fed policy affects the dollar!',
-            action: () => applyShock('interest-up'),
+            title: 'Demand for Currency',
+            description: 'Demand for a currency comes from: foreigners buying our exports, foreign investors buying our assets, tourists visiting us. More demand = appreciation.',
+            setup: () => { applyShock('none'); setDemandShift(15); },
         },
         {
-            title: 'Trade Balance Effects',
-            description: 'An export boom means foreigners need our currency → appreciation. An import surge means we need foreign currency → depreciation.',
-            action: () => applyShock('export-up'),
+            title: 'Equilibrium Exchange Rate',
+            description: 'Where supply meets demand determines the equilibrium exchange rate. At this rate, the quantity of currency demanded equals quantity supplied.',
+            setup: () => applyShock('none'),
         },
         {
-            title: 'Try It Yourself!',
-            description: 'Use the sliders to shift demand and supply. Apply different shocks to see how exchange rates respond. Watch for appreciation vs depreciation!',
-            action: () => applyShock('none'),
+            title: 'Currency Appreciation',
+            description: 'When demand rises or supply falls, the exchange rate increases. The currency buys more foreign currency — it has appreciated.',
+            setup: () => applyShock('interest-up'),
         },
-    ]
+        {
+            title: 'Currency Depreciation',
+            description: 'When demand falls or supply rises, the exchange rate decreases. The currency buys less foreign currency — it has depreciated.',
+            setup: () => applyShock('interest-down'),
+        },
+        {
+            title: 'Effects on Trade',
+            description: 'Appreciation makes exports expensive and imports cheap (NX falls). Depreciation makes exports cheap and imports expensive (NX rises).',
+            setup: () => applyShock('export-up'),
+        },
+        {
+            title: 'Capital Flows',
+            description: 'Higher interest rates attract foreign investment (capital inflow → appreciation). Lower rates cause capital outflow → depreciation. Try different shocks!',
+            setup: () => applyShock('none'),
+        },
+    ], [applyShock, reset])
 
-    useEffect(() => {
-        if (showDemo) {
-            demoSteps[demoStep].action()
-        }
-    }, [showDemo, demoStep])
+    const demo = useDemoMode(demoSteps)
+
+    // Derived display values
+    const currencyDirection = isAppreciating ? 'Appreciating' : isDepreciating ? 'Depreciating' : 'Stable'
+    const netExportsEffect = isAppreciating ? 'NX Decreasing' : isDepreciating ? 'NX Increasing' : 'Neutral'
+    const capitalFlow = isAppreciating ? 'Inflow' : isDepreciating ? 'Outflow' : 'Balanced'
 
     useEffect(() => {
         const canvas = canvasRef.current
@@ -300,199 +320,70 @@ export default function ForeignExchange() {
             <div className="flex-1 relative">
                 <canvas ref={canvasRef} className="w-full h-full" />
 
-                {/* Pair selector */}
-                <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    className="absolute top-4 left-4 flex gap-2"
-                >
-                    {currencyPairs.map((p, i) => (
-                        <button
-                            key={p.name}
-                            onClick={() => setSelectedPair(i)}
-                            className={`px-3 py-1.5 rounded-lg text-xs transition-all ${selectedPair === i
-                                ? 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30'
-                                : 'text-white/50 hover:text-white bg-black/30 border border-white/10'
-                                }`}
-                        >
-                            {p.baseFlag} {p.name}
-                        </button>
-                    ))}
-                </motion.div>
-
-                {/* Info panel */}
-                <motion.div
-                    initial={{ opacity: 0, x: 20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    className="absolute top-4 right-4 bg-black/40 backdrop-blur-md rounded-xl p-4 border border-white/10 max-w-xs"
-                >
-                    <div className="flex items-center justify-between mb-3">
-                        <div className="flex items-center gap-2">
-                            <span className="text-2xl">{pair.baseFlag}</span>
-                            <div>
-                                <span className="text-sm font-medium text-yellow-400">{pair.base}/{pair.quote}</span>
-                                <div className="text-lg font-mono text-white">{equilibriumE.toFixed(2)}</div>
-                            </div>
-                        </div>
-                        <button
-                            onClick={() => { setShowDemo(true); setDemoStep(0) }}
-                            className="text-xs px-2 py-1 rounded-lg bg-yellow-500/20 text-yellow-400 hover:bg-yellow-500/30 transition-colors"
-                        >
-                            Learn
-                        </button>
-                    </div>
-
-                    <div className={`text-sm font-medium mb-3 ${isAppreciating ? 'text-green-400' : isDepreciating ? 'text-red-400' : 'text-white/60'
-                        }`}>
-                        {isAppreciating && `↑ ${pair.base} Appreciating (+${exchangeChange.toFixed(1)})`}
-                        {isDepreciating && `↓ ${pair.base} Depreciating (${exchangeChange.toFixed(1)})`}
-                        {!isAppreciating && !isDepreciating && 'At Equilibrium'}
-                    </div>
-
-                    <p className="text-xs text-white/60">{shocks[shock].description}</p>
-                </motion.div>
-
-                {/* Shock buttons */}
-                <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    className="absolute bottom-24 left-4 flex flex-col gap-2"
-                >
-                    <div className="text-xs text-white/40 mb-1">Quick Shocks:</div>
-                    {(Object.keys(shocks) as Shock[]).filter(s => s !== 'none').map(s => (
-                        <button
-                            key={s}
-                            onClick={() => applyShock(s)}
-                            className={`px-3 py-1.5 rounded-lg text-xs transition-all text-left ${shock === s
-                                ? 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30'
-                                : 'text-white/50 hover:text-white bg-black/30 border border-white/10'
-                                }`}
-                        >
-                            {shocks[s].name}
-                        </button>
-                    ))}
-                </motion.div>
-            </div>
-
-            {/* Controls */}
-            <div className="border-t border-white/10 bg-black/30 backdrop-blur-sm px-6 py-4">
-                <div className="max-w-4xl mx-auto flex items-center justify-between gap-6">
-                    <div className="flex items-center gap-6">
-                        <div className="flex items-center gap-3">
-                            <span className="text-blue-400 text-sm font-medium">Demand</span>
-                            <input
-                                type="range"
-                                min={-40}
-                                max={40}
-                                value={demandShift}
-                                onChange={e => { setDemandShift(+e.target.value); setShock('none') }}
-                                className="w-28 accent-blue-400"
+                {/* Controls — top-left */}
+                <div className="absolute top-4 left-4 space-y-3 max-w-[260px]">
+                    <ControlPanel>
+                        <ControlGroup label="Currency Pair">
+                            <Select
+                                value={String(selectedPair)}
+                                onChange={v => setSelectedPair(Number(v))}
+                                options={currencyPairs.map((p, i) => ({ value: String(i), label: `${p.baseFlag} ${p.name}` }))}
                             />
-                            <span className={`text-xs font-mono w-8 ${demandShift > 0 ? 'text-green-400' : demandShift < 0 ? 'text-red-400' : 'text-white/40'}`}>
-                                {demandShift > 0 ? '→' : demandShift < 0 ? '←' : '—'}
-                            </span>
-                        </div>
-
-                        <div className="flex items-center gap-3">
-                            <span className="text-orange-400 text-sm font-medium">Supply</span>
-                            <input
-                                type="range"
-                                min={-40}
-                                max={40}
-                                value={supplyShift}
-                                onChange={e => { setSupplyShift(+e.target.value); setShock('none') }}
-                                className="w-28 accent-orange-400"
+                        </ControlGroup>
+                        <ControlGroup label="Shock">
+                            <ButtonGroup
+                                value={shock}
+                                onChange={v => applyShock(v as Shock)}
+                                options={[
+                                    { value: 'none', label: 'None' },
+                                    { value: 'interest-up', label: 'Rate+' },
+                                    { value: 'interest-down', label: 'Rate-' },
+                                    { value: 'export-up', label: 'Export' },
+                                    { value: 'import-up', label: 'Import' },
+                                    { value: 'inflation', label: 'Infl.' },
+                                ]}
+                                color={GOLD}
                             />
-                            <span className={`text-xs font-mono w-8 ${supplyShift > 0 ? 'text-green-400' : supplyShift < 0 ? 'text-red-400' : 'text-white/40'}`}>
-                                {supplyShift > 0 ? '→' : supplyShift < 0 ? '←' : '—'}
-                            </span>
+                        </ControlGroup>
+                        <Slider label="Demand Shift" value={demandShift} onChange={v => { setDemandShift(v); setShock('none') }} min={-40} max={40} step={1} />
+                        <Slider label="Supply Shift" value={supplyShift} onChange={v => { setSupplyShift(v); setShock('none') }} min={-40} max={40} step={1} />
+                        <div className="flex gap-2">
+                            <Button onClick={demo.open} variant="secondary">Tutorial</Button>
+                            <Button onClick={reset} variant="secondary">Reset</Button>
                         </div>
-                    </div>
+                    </ControlPanel>
+                    <APTag course="Macroeconomics" unit="Unit 6" color={GOLD} />
+                </div>
 
-                    <button
-                        onClick={() => applyShock('none')}
-                        className="px-3 py-1.5 rounded-lg text-sm bg-white/5 text-white/70 hover:bg-white/10 hover:text-white transition-colors border border-white/10"
-                    >
-                        Reset
-                    </button>
+                {/* InfoPanel + EquationDisplay — top-right */}
+                <div className="absolute top-4 right-4 space-y-3 max-w-[240px]">
+                    <InfoPanel departmentColor={GOLD} title="Forex Market" items={[
+                        { label: 'Exchange Rate', value: equilibriumE.toFixed(2), color: GOLD },
+                        { label: 'Currency', value: currencyDirection, color: isAppreciating ? 'rgba(100,200,150,1)' : isDepreciating ? 'rgba(255,100,100,1)' : 'rgba(255,255,255,0.6)' },
+                        { label: 'Net Exports', value: netExportsEffect, color: isDepreciating ? 'rgba(100,200,150,1)' : isAppreciating ? 'rgba(255,100,100,1)' : 'rgba(255,255,255,0.6)' },
+                        { label: 'Capital Flow', value: capitalFlow, color: isAppreciating ? 'rgba(100,150,255,1)' : isDepreciating ? 'rgba(255,150,100,1)' : 'rgba(255,255,255,0.6)' },
+                    ]} />
+                    <EquationDisplay departmentColor={GOLD} title="Key Relationships" collapsed equations={[
+                        { label: 'Equilibrium', expression: 'E = S ∩ D', description: 'Exchange rate from supply and demand' },
+                        { label: 'Appreciation', expression: 'E↑ → NX↓', description: 'Stronger currency reduces net exports' },
+                        { label: 'Depreciation', expression: 'E↓ → NX↑', description: 'Weaker currency increases net exports' },
+                    ]} />
+                </div>
+
+                {/* DemoMode — bottom center */}
+                <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-40">
+                    <DemoMode
+                        steps={demoSteps}
+                        currentStep={demo.currentStep}
+                        isOpen={demo.isOpen}
+                        onClose={demo.close}
+                        onNext={demo.next}
+                        onPrev={demo.prev}
+                        onGoToStep={demo.goToStep}
+                        departmentColor={GOLD}
+                    />
                 </div>
             </div>
-
-            {/* Demo Modal */}
-            <AnimatePresence>
-                {showDemo && (
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="absolute inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4"
-                        onClick={() => setShowDemo(false)}
-                    >
-                        <motion.div
-                            initial={{ scale: 0.9, opacity: 0 }}
-                            animate={{ scale: 1, opacity: 1 }}
-                            exit={{ scale: 0.9, opacity: 0 }}
-                            className="bg-[#1a150a] border border-white/20 rounded-2xl p-6 max-w-md w-full shadow-2xl"
-                            onClick={e => e.stopPropagation()}
-                        >
-                            <div className="flex items-center justify-between mb-4">
-                                <span className="text-xs text-white/40">
-                                    {demoStep + 1} of {demoSteps.length}
-                                </span>
-                                <button
-                                    onClick={() => setShowDemo(false)}
-                                    className="text-white/40 hover:text-white text-xl"
-                                >
-                                    ×
-                                </button>
-                            </div>
-
-                            <h3 className="text-xl font-semibold text-yellow-400 mb-3">
-                                {demoSteps[demoStep].title}
-                            </h3>
-                            <p className="text-white/70 mb-6 leading-relaxed">
-                                {demoSteps[demoStep].description}
-                            </p>
-
-                            <div className="flex justify-center gap-2 mb-6">
-                                {demoSteps.map((_, i) => (
-                                    <button
-                                        key={i}
-                                        onClick={() => setDemoStep(i)}
-                                        className={`w-2 h-2 rounded-full transition-colors ${i === demoStep ? 'bg-yellow-400' : 'bg-white/20 hover:bg-white/40'
-                                            }`}
-                                    />
-                                ))}
-                            </div>
-
-                            <div className="flex justify-between gap-3">
-                                <button
-                                    onClick={() => setDemoStep(Math.max(0, demoStep - 1))}
-                                    disabled={demoStep === 0}
-                                    className="px-4 py-2 rounded-lg bg-white/5 text-white/70 hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-                                >
-                                    ← Previous
-                                </button>
-                                {demoStep < demoSteps.length - 1 ? (
-                                    <button
-                                        onClick={() => setDemoStep(demoStep + 1)}
-                                        className="px-4 py-2 rounded-lg bg-yellow-500/20 text-yellow-400 hover:bg-yellow-500/30 transition-colors"
-                                    >
-                                        Next →
-                                    </button>
-                                ) : (
-                                    <button
-                                        onClick={() => setShowDemo(false)}
-                                        className="px-4 py-2 rounded-lg bg-green-500/20 text-green-400 hover:bg-green-500/30 transition-colors"
-                                    >
-                                        Done ✓
-                                    </button>
-                                )}
-                            </div>
-                        </motion.div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
         </div>
     )
 }

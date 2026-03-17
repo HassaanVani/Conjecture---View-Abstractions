@@ -41,14 +41,14 @@ export default function AggregateSupplyDemand() {
     }, [])
 
     const demoSteps: DemoStep[] = useMemo(() => [
-        { title: 'The AD-AS Model', description: 'Aggregate Demand (AD) is total spending. Short-Run Aggregate Supply (SRAS) is total production at each price level.', setup: () => applyScenario('neutral') },
-        { title: 'Long-Run Aggregate Supply', description: 'The vertical LRAS shows potential output (Y*). In the long run, output returns here regardless of prices.', setup: () => { setShowLRAS(true); applyScenario('neutral') } },
-        { title: 'Recessionary Gap', description: 'AD shifts left: less spending, output falls BELOW potential. Unemployment rises.', setup: () => applyScenario('recession') },
-        { title: 'Inflationary Gap', description: 'AD shifts right: more spending, output temporarily exceeds potential. Prices rise.', setup: () => applyScenario('inflation') },
-        { title: 'Stagflation', description: 'Leftward SRAS shift: falling output AND rising prices. Oil crises, pandemics.', setup: () => applyScenario('stagflation') },
-        { title: 'Long-Run Growth', description: 'LRAS shifts right: more capacity without inflation. Technology, education, investment.', setup: () => applyScenario('growth') },
-        { title: 'Self-Correction', description: 'In the long run, SRAS adjusts to move economy back to LRAS. Wages and prices are flexible long-run.', setup: () => applyScenario('neutral') },
-        { title: 'Experiment', description: 'Use sliders to shift AD and SRAS. Can you create a recession? An inflationary gap?', setup: () => applyScenario('neutral') },
+        { title: 'The AD-AS Model', description: 'The AD-AS model shows how aggregate demand and aggregate supply determine the price level and real GDP in an economy.', setup: () => { applyScenario('neutral'); setShowLRAS(true) } },
+        { title: 'Aggregate Demand', description: 'The AD curve slopes downward: as price level falls, real GDP demanded rises. AD = C + I + G + NX.', setup: () => { applyScenario('neutral'); setAdShift(0); setSrasShift(0) } },
+        { title: 'Short-Run Aggregate Supply', description: 'The SRAS curve slopes upward: higher prices incentivize more production in the short run, given sticky input prices.', setup: () => { applyScenario('neutral'); setAdShift(0); setSrasShift(0) } },
+        { title: 'Long-Run Aggregate Supply', description: 'The vertical LRAS represents full-employment output (Y_f). In the long run, real GDP returns here regardless of the price level.', setup: () => { setShowLRAS(true); applyScenario('neutral') } },
+        { title: 'Equilibrium', description: 'Short-run equilibrium occurs where AD intersects SRAS. Long-run equilibrium also requires intersection at LRAS.', setup: () => { applyScenario('neutral'); setShowLRAS(true) } },
+        { title: 'Recessionary Gap', description: 'When AD shifts left, equilibrium output falls below Y_f. Unemployment rises and there is a negative GDP gap.', setup: () => applyScenario('recession') },
+        { title: 'Inflationary Gap', description: 'When AD shifts right, equilibrium output exceeds Y_f. Prices rise and there is a positive GDP gap.', setup: () => applyScenario('inflation') },
+        { title: 'Self-Correction', description: 'In the long run, SRAS adjusts until the economy returns to Y_f. Wages and input prices eventually respond to close the gap.', setup: () => applyScenario('neutral') },
     ], [applyScenario])
 
     const demo = useDemoMode(demoSteps)
@@ -163,18 +163,19 @@ export default function AggregateSupplyDemand() {
 
                 <div className="absolute top-4 right-4 space-y-3 max-w-[240px]">
                     <InfoPanel departmentColor={GOLD} title={currentScenario.name} items={[
-                        { label: 'Output (Y)', value: eqX.toFixed(0) },
-                        { label: 'Price Level (P)', value: eqY.toFixed(0) },
-                        { label: 'Output Gap', value: outputGap > 4 ? `+${outputGap.toFixed(0)} (Inflationary)` : outputGap < -4 ? `${outputGap.toFixed(0)} (Recessionary)` : 'None', color: outputGap > 4 ? 'rgba(255,150,100,1)' : outputGap < -4 ? 'rgba(100,150,255,1)' : 'rgba(80,200,120,1)' },
+                        { label: 'Price Level', value: eqY.toFixed(0) },
+                        { label: 'Real GDP', value: eqX.toFixed(0) },
+                        { label: 'GDP Gap', value: outputGap > 4 ? `+${outputGap.toFixed(0)}` : outputGap < -4 ? `${outputGap.toFixed(0)}` : '0', color: outputGap > 4 ? 'rgba(255,150,100,1)' : outputGap < -4 ? 'rgba(100,150,255,1)' : 'rgba(80,200,120,1)' },
+                        { label: 'Gap Type', value: outputGap > 4 ? 'Inflationary' : outputGap < -4 ? 'Recessionary' : 'None', color: outputGap > 4 ? 'rgba(255,150,100,1)' : outputGap < -4 ? 'rgba(100,150,255,1)' : 'rgba(80,200,120,1)' },
                     ]} />
                     <div className="backdrop-blur-xl bg-black/40 border border-white/10 rounded-xl px-4 py-3">
                         <p className="text-xs text-white/60 mb-1">{currentScenario.description}</p>
                         <p className="text-xs text-green-400">Policy: {currentScenario.policy}</p>
                     </div>
                     <EquationDisplay departmentColor={GOLD} title="Key Equations" collapsed equations={[
-                        { label: 'AD', expression: 'C + I + G + NX', description: 'Total spending at each price level' },
-                        { label: 'SRAS', expression: 'Y = f(P, input costs)', description: 'Short-run production' },
-                        { label: 'LRAS', expression: 'Y* = f(L, K, Tech)', description: 'Potential output (vertical)' },
+                        { label: 'AD', expression: 'C + I + G + NX', description: 'Aggregate demand components' },
+                        { label: 'SRAS', expression: 'f(input prices)', description: 'Short-run supply' },
+                        { label: 'LRAS', expression: 'at Y_f', description: 'Full employment output' },
                     ]} />
                 </div>
 

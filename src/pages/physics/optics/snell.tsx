@@ -29,7 +29,6 @@ export default function SnellsLaw() {
     const [preset, setPreset] = useState('air-glass')
     const [showCritical, setShowCritical] = useState(true)
     const [animateTIR, setAnimateTIR] = useState(false)
-    const animAngleRef = useRef(0)
 
     useEffect(() => {
         const p: Record<string, [number, number]> = {

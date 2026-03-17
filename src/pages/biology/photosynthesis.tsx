@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { ControlPanel, ControlGroup, Slider, Button, ButtonGroup, Toggle } from '@/components/control-panel'
+import { Slider, Button, ButtonGroup } from '@/components/control-panel'
 import { EquationDisplay } from '@/components/equation-display'
 import { InfoPanel, APTag } from '@/components/info-panel'
 import { DemoMode, useDemoMode } from '@/components/demo-mode'

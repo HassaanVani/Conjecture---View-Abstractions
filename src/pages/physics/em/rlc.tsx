@@ -1,13 +1,11 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
-import { Link } from 'react-router-dom'
-import { PhysicsBackground } from '@/components/backgrounds'
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { ControlPanel, ControlGroup, Slider, Button, Toggle } from '@/components/control-panel'
 import { EquationDisplay } from '@/components/equation-display'
 import { InfoPanel, APTag } from '@/components/info-panel'
 import { DemoMode, useDemoMode } from '@/components/demo-mode'
 import type { DemoStep } from '@/components/demo-mode'
 
-const PURPLE = 'rgb(168, 85, 247)'
+const PURPLE = 'rgb(160, 100, 255)'
 
 export default function RLC() {
     const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -28,13 +26,10 @@ export default function RLC() {
     const XC = 1 / (omega * (capacitance * 1e-6))
     const Z = Math.sqrt(resistance * resistance + (XL - XC) * (XL - XC))
     const phase = Math.atan2(XL - XC, resistance)
-    const I_max = V_max_source / Z
     const f0 = 1 / (2 * Math.PI * Math.sqrt(inductance * capacitance * 1e-6))
     const omega0 = 2 * Math.PI * f0
     const Q = omega0 * inductance / resistance
     const powerFactor = Math.cos(phase)
-    const avgPower = 0.5 * V_max_source * I_max * powerFactor
-    const bandwidth = f0 / Q
 
     const reset = useCallback(() => {
         timeRef.current = 0
@@ -47,51 +42,48 @@ export default function RLC() {
         setShowPowerPlot(false)
     }, [])
 
-    const demoSteps: DemoStep[] = [
+    const demoSteps: DemoStep[] = useMemo(() => [
         {
-            title: 'RLC Circuit',
-            description: 'A series RLC circuit has a resistor (R), inductor (L), and capacitor (C) driven by an AC voltage source. The current and voltage have phase relationships.',
+            title: 'RLC Circuit Basics',
+            description: 'A series RLC circuit has a resistor (R), inductor (L), and capacitor (C) driven by an AC voltage source. Current and voltage have phase relationships determined by component values.',
             setup: () => { reset() },
         },
         {
-            title: 'Phasor Diagram',
-            description: 'The left panel shows rotating phasors. V_R is in phase with current, V_L leads by 90 degrees, and V_C lags by 90 degrees.',
-            setup: () => { setResistance(10); setInductance(0.1); setCapacitance(100); setFrequency(50); setIsRunning(true) },
-        },
-        {
             title: 'Impedance',
-            description: 'Impedance Z = sqrt(R^2 + (X_L - X_C)^2) is the AC equivalent of resistance. It determines the current amplitude I_max = V_max / Z.',
-            setup: () => { setResistance(20); setFrequency(50) },
+            description: 'Impedance Z = sqrt(R^2 + (X_L - X_C)^2) is the AC equivalent of resistance. It determines the current amplitude I = V/Z. Increase R to see Z rise.',
+            setup: () => { reset(); setResistance(30); setFrequency(50) },
         },
         {
             title: 'Resonance',
-            description: 'At resonance, X_L = X_C and impedance is minimized to just R. Current is maximum and in phase with voltage.',
-            setup: () => {
-                setResistance(10)
-                setFrequency(Math.round(f0))
-            },
+            description: 'At resonance, X_L = X_C and impedance is minimized to just R. Current is maximum and in phase with voltage. Watch the phasor diagram align.',
+            setup: () => { reset(); setFrequency(Math.round(1 / (2 * Math.PI * Math.sqrt(0.1 * 100e-6)))) },
         },
         {
-            title: 'Above Resonance',
-            description: 'When f > f_0, inductive reactance dominates (X_L > X_C). The circuit is inductive and current lags voltage.',
-            setup: () => { setFrequency(Math.round(f0 * 2)) },
+            title: 'Quality Factor',
+            description: 'Q = omega_0 L / R measures the sharpness of resonance. Low R gives high Q (sharp peak). Try lowering R to see Q increase.',
+            setup: () => { reset(); setResistance(3); setFrequency(Math.round(1 / (2 * Math.PI * Math.sqrt(0.1 * 100e-6)))) },
         },
         {
-            title: 'Below Resonance',
-            description: 'When f < f_0, capacitive reactance dominates (X_C > X_L). The circuit is capacitive and current leads voltage.',
-            setup: () => { setFrequency(Math.round(f0 * 0.5)) },
+            title: 'Power & Dissipation',
+            description: 'Average power P = (1/2) V I cos(phi). At resonance cos(phi) = 1, so power transfer is maximized. Toggle the power plot to see.',
+            setup: () => { reset(); setShowPowerPlot(true); setFrequency(Math.round(1 / (2 * Math.PI * Math.sqrt(0.1 * 100e-6)))) },
         },
         {
-            title: 'Impedance vs Frequency',
-            description: 'Toggle the impedance plot to see how Z varies with frequency. The dip at f_0 shows the resonance minimum.',
-            setup: () => { setShowImpedancePlot(true); setShowPowerPlot(false); setFrequency(50) },
+            title: 'Phasor Diagram',
+            description: 'V_R is in phase with current, V_L leads by 90 deg, V_C lags by 90 deg. The total voltage phasor is the vector sum. Observe how phase changes with frequency.',
+            setup: () => { reset(); setFrequency(50) },
         },
         {
-            title: 'Power Factor',
-            description: 'The power factor cos(phi) determines how much real power is delivered. At resonance, cos(phi) = 1 and power transfer is maximized.',
-            setup: () => { setShowPowerPlot(true); setShowImpedancePlot(false) },
+            title: 'Frequency Response',
+            description: 'Toggle the impedance plot to see how Z varies with frequency. The dip at f_0 shows the resonance minimum. The current marker tracks your frequency.',
+            setup: () => { reset(); setShowImpedancePlot(true); setFrequency(50) },
         },
-    ]
+        {
+            title: 'Experiment',
+            description: 'Adjust R, L, C, and frequency freely. Toggle impedance and power plots. Try to find resonance and maximize current!',
+            setup: () => { reset() },
+        },
+    ], [reset])
 
     const demo = useDemoMode(demoSteps)
 
@@ -264,7 +256,6 @@ export default function RLC() {
                 ctx.fillStyle = 'rgba(0,0,0,0.4)'
                 ctx.fillRect(ipx - 10, ipy - iph - 10, ipw + 20, iph + 30)
 
-                // Compute impedance curve
                 const fMin = 10
                 const fMax = 200
                 let maxZ = 0
@@ -277,7 +268,6 @@ export default function RLC() {
                     if (zz > maxZ) maxZ = zz
                 }
 
-                // Impedance curve
                 ctx.strokeStyle = PURPLE
                 ctx.lineWidth = 2
                 ctx.beginPath()
@@ -294,7 +284,6 @@ export default function RLC() {
                 }
                 ctx.stroke()
 
-                // Resonance line
                 const resX = ipx + ((localF0 - fMin) / (fMax - fMin)) * ipw
                 ctx.strokeStyle = 'rgba(251,191,36,0.5)'
                 ctx.setLineDash([3, 3])
@@ -304,7 +293,6 @@ export default function RLC() {
                 ctx.stroke()
                 ctx.setLineDash([])
 
-                // Current frequency marker
                 const curX = ipx + ((frequency - fMin) / (fMax - fMin)) * ipw
                 ctx.strokeStyle = '#ef4444'
                 ctx.lineWidth = 2
@@ -366,7 +354,6 @@ export default function RLC() {
                 }
                 ctx.stroke()
 
-                // Current frequency marker
                 const curX = ppx + ((frequency - fMin) / (fMax - fMin)) * ppw
                 ctx.strokeStyle = '#ef4444'
                 ctx.lineWidth = 2
@@ -389,7 +376,6 @@ export default function RLC() {
             ctx.font = '10px sans-serif'
             ctx.textAlign = 'center'
 
-            // Simple R-L-C series
             ctx.beginPath()
             ctx.moveTo(cdx, cdy)
             ctx.lineTo(cdx + 60, cdy)
@@ -425,119 +411,57 @@ export default function RLC() {
     }, [resistance, inductance, capacitance, frequency, isRunning, showImpedancePlot, showPowerPlot, V_max_source])
 
     return (
-        <div className="min-h-screen flex flex-col bg-[#0f0a1a] text-white font-sans overflow-hidden">
-            <div className="absolute inset-0 pointer-events-none">
-                <PhysicsBackground />
-            </div>
+        <div className="h-[calc(100vh-64px)] flex flex-col bg-[#0f0a1a]">
+            <div className="flex-1 relative">
+                <canvas ref={canvasRef} className="w-full h-full block" />
 
-            {/* Navbar */}
-            <div className="relative z-10 flex items-center justify-between px-6 py-4 border-b border-white/10 bg-[#0f0a1a]/80 backdrop-blur-md">
-                <div className="flex items-center gap-4">
-                    <Link to="/physics" className="p-2 rounded-full hover:bg-white/10 transition-colors">
-                        <svg className="w-5 h-5 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                        </svg>
-                    </Link>
-                    <div>
-                        <h1 className="text-xl font-medium tracking-tight">RLC Circuit</h1>
-                        <APTag course="Physics C: E&M" unit="Unit 4" color={PURPLE} />
-                    </div>
-                </div>
-                <Button variant="secondary" onClick={demo.open}>Tutorial</Button>
-            </div>
-
-            <div className="flex-1 relative flex">
-                <div className="flex-1 relative">
-                    <canvas ref={canvasRef} className="w-full h-full block" />
-
-                    {/* Equation overlay */}
-                    <div className="absolute top-4 left-4 z-10">
-                        <EquationDisplay
-                            departmentColor={PURPLE}
-                            title="RLC Equations"
-                            equations={[
-                                { label: 'Impedance', expression: 'Z = sqrt(R^2 + (X_L - X_C)^2)', description: 'Total circuit impedance' },
-                                { label: 'Resonance', expression: 'omega_0 = 1 / sqrt(LC)', description: 'Resonant angular frequency' },
-                                { label: 'Phase', expression: 'tan(phi) = (X_L - X_C) / R', description: 'Phase angle between V and I' },
-                                { label: 'Power', expression: 'P_avg = (1/2) V_max I_max cos(phi)', description: 'Average power dissipated' },
-                            ]}
-                        />
-                    </div>
-
-                    {/* Info panel */}
-                    <div className="absolute top-4 right-4 z-10">
-                        <InfoPanel
-                            departmentColor={PURPLE}
-                            title="Circuit Values"
-                            items={[
-                                { label: 'f_0', value: f0.toFixed(1), unit: 'Hz', color: '#fbbf24' },
-                                { label: 'Z', value: Z.toFixed(1), unit: 'ohm' },
-                                { label: 'X_L', value: XL.toFixed(1), unit: 'ohm', color: '#ef4444' },
-                                { label: 'X_C', value: XC.toFixed(1), unit: 'ohm', color: '#3b82f6' },
-                                { label: 'Phase', value: `${(phase * 180 / Math.PI).toFixed(1)}`, unit: 'deg' },
-                                { label: 'I_max', value: I_max.toFixed(3), unit: 'A' },
-                                { label: 'Q factor', value: Q.toFixed(2), color: Q > 5 ? '#4ade80' : undefined },
-                                { label: 'Power Factor', value: powerFactor.toFixed(3) },
-                                { label: 'P_avg', value: avgPower.toFixed(1), unit: 'W' },
-                                { label: 'Bandwidth', value: bandwidth.toFixed(1), unit: 'Hz' },
-                            ]}
-                        />
-                    </div>
-
-                    {/* Demo overlay */}
-                    <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-30">
-                        <DemoMode
-                            steps={demoSteps}
-                            currentStep={demo.currentStep}
-                            isOpen={demo.isOpen}
-                            onClose={demo.close}
-                            onNext={demo.next}
-                            onPrev={demo.prev}
-                            onGoToStep={demo.goToStep}
-                            departmentColor={PURPLE}
-                        />
-                    </div>
-                </div>
-
-                {/* Controls Sidebar */}
-                <div className="w-80 bg-[#0f0a1a]/90 border-l border-white/10 p-6 flex flex-col gap-4 overflow-y-auto no-scrollbar z-20">
+                {/* Controls — top-left */}
+                <div className="absolute top-4 left-4 space-y-3 max-w-[260px]">
                     <ControlPanel>
                         <ControlGroup label="Circuit Components">
-                            <Slider label={`Resistance R = ${resistance} ohm`} value={resistance} onChange={setResistance} min={1} max={100} step={1} />
-                            <Slider label={`Inductance L = ${inductance.toFixed(2)} H`} value={inductance} onChange={setInductance} min={0.01} max={0.5} step={0.01} />
-                            <Slider label={`Capacitance C = ${capacitance} uF`} value={capacitance} onChange={setCapacitance} min={10} max={500} step={10} />
+                            <Slider label={`R = ${resistance} \u03A9`} value={resistance} onChange={setResistance} min={1} max={100} step={1} />
+                            <Slider label={`L = ${inductance.toFixed(2)} H`} value={inductance} onChange={setInductance} min={0.01} max={0.5} step={0.01} />
+                            <Slider label={`C = ${capacitance} \u03BCF`} value={capacitance} onChange={setCapacitance} min={10} max={500} step={10} />
                         </ControlGroup>
-                    </ControlPanel>
-
-                    <ControlPanel>
                         <ControlGroup label="AC Source">
-                            <Slider label={`Frequency f = ${frequency} Hz`} value={frequency} onChange={setFrequency} min={10} max={200} step={1} />
-                            <p className="text-xs text-purple-400">
-                                Resonance at f_0 = {f0.toFixed(1)} Hz
-                            </p>
-                            <Button
-                                variant="secondary"
-                                onClick={() => setFrequency(Math.round(f0))}
-                                className="w-full"
-                            >
-                                Set to Resonance
-                            </Button>
+                            <Slider label={`f = ${frequency} Hz`} value={frequency} onChange={setFrequency} min={10} max={200} step={1} />
+                            <p className="text-xs text-purple-400">Resonance at f\u2080 = {f0.toFixed(1)} Hz</p>
+                            <Button variant="secondary" onClick={() => setFrequency(Math.round(f0))}>Set to Resonance</Button>
                         </ControlGroup>
-                    </ControlPanel>
-
-                    <ControlPanel>
                         <ControlGroup label="Plots">
                             <Toggle label="Impedance vs f" value={showImpedancePlot} onChange={setShowImpedancePlot} />
                             <Toggle label="Power vs f" value={showPowerPlot} onChange={setShowPowerPlot} />
                         </ControlGroup>
+                        <div className="flex gap-2 flex-wrap">
+                            <Button onClick={() => setIsRunning(!isRunning)} variant={isRunning ? 'secondary' : 'primary'}>
+                                {isRunning ? 'Pause' : 'Play'}
+                            </Button>
+                            <Button variant="secondary" onClick={reset}>Reset</Button>
+                            <Button onClick={demo.open} variant="secondary">Tutorial</Button>
+                        </div>
                     </ControlPanel>
+                    <APTag course="Physics C: E&M" unit="Unit 4" color={PURPLE} />
+                </div>
 
-                    <div className="flex gap-2">
-                        <Button onClick={() => setIsRunning(!isRunning)} variant={isRunning ? 'secondary' : 'primary'}>
-                            {isRunning ? 'Pause' : 'Play'}
-                        </Button>
-                        <Button variant="secondary" onClick={reset}>Reset</Button>
-                    </div>
+                {/* Info + Equations — top-right */}
+                <div className="absolute top-4 right-4 space-y-3 max-w-[240px]">
+                    <InfoPanel departmentColor={PURPLE} title="Circuit Values" items={[
+                        { label: 'Impedance Z', value: `${Z.toFixed(1)}`, unit: '\u03A9' },
+                        { label: 'Resonant \u03C9\u2080', value: `${omega0.toFixed(1)}`, unit: 'rad/s' },
+                        { label: 'Q-Factor', value: Q.toFixed(2), color: Q > 5 ? '#4ade80' : undefined },
+                        { label: 'Phase Angle', value: `${(phase * 180 / Math.PI).toFixed(1)}`, unit: 'deg' },
+                        { label: 'Power Factor', value: powerFactor.toFixed(3) },
+                    ]} />
+                    <EquationDisplay departmentColor={PURPLE} title="RLC Equations" collapsed equations={[
+                        { label: 'Impedance', expression: 'Z = \u221A(R\u00B2 + (X_L \u2212 X_C)\u00B2)', description: 'Impedance magnitude' },
+                        { label: 'Resonance', expression: '\u03C9\u2080 = 1/\u221A(LC)', description: 'Resonant frequency' },
+                        { label: 'Q Factor', expression: 'Q = \u03C9\u2080L / R', description: 'Quality factor' },
+                    ]} />
+                </div>
+
+                {/* Demo — bottom center */}
+                <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-40">
+                    <DemoMode steps={demoSteps} currentStep={demo.currentStep} isOpen={demo.isOpen} onClose={demo.close} onNext={demo.next} onPrev={demo.prev} onGoToStep={demo.goToStep} departmentColor={PURPLE} />
                 </div>
             </div>
         </div>

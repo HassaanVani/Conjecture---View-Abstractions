@@ -60,7 +60,7 @@ function buildMergeSortTree(n: number): TreeNode[] {
     build(arr.slice(mid), depth + 1, id)
     return id
   }
-  const arr = Array.from({ length: Math.min(n, 8) }, (_, i) => Math.floor(Math.random() * 20) + 1)
+  const arr = Array.from({ length: Math.min(n, 8) }, () => Math.floor(Math.random() * 20) + 1)
   build(arr, 0, null)
   return nodes
 }

@@ -136,14 +136,12 @@ export default function Collision() {
 
             // Center of mass marker
             const comX = (balls[0].x * balls[0].mass + balls[1].x * balls[1].mass) / (balls[0].mass + balls[1].mass)
-            const comY = (balls[0].y * balls[0].mass + balls[1].y * balls[1].mass) / (balls[0].mass + balls[1].mass)
             ctx.strokeStyle = 'rgba(160,100,255,0.3)'; ctx.lineWidth = 1; ctx.setLineDash([4, 4])
             ctx.beginPath(); ctx.moveTo(comX, 0); ctx.lineTo(comX, h); ctx.stroke(); ctx.setLineDash([])
             ctx.fillStyle = PC; ctx.font = '10px monospace'; ctx.textAlign = 'center'
             ctx.fillText('COM', comX, 14)
 
             balls.forEach(b => {
-                const drawX = showCOMFrame ? b.x - comVxNow * stateRef.current.balls[0].x / (b.vx || 1) : b.x
                 const bx = showCOMFrame ? w / 2 + (b.x - comX) : b.x
                 const by = b.y
 

@@ -26,7 +26,7 @@ export default function ProductionCosts() {
 
     // Long-run ATC (economies of scale envelope)
     const getLRATC = useCallback((Q: number) => {
-        const minATC = Infinity; let best = Infinity
+        let best = Infinity
         for (let fc = 50; fc <= 300; fc += 10) {
             const L = (Q / 10) ** 2; const tc = fc + wageCost * L; const atc = Q > 0 ? tc / Q : 0
             if (atc < best) best = atc

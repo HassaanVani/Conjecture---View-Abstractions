@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { AnimatePresence } from 'framer-motion'
 import { lazy, Suspense } from 'react'
 import Layout from '@/components/layout'
+import { ErrorBoundary } from '@/components/error-boundary'
 
 // Loading spinner for lazy-loaded routes
 function LoadingSpinner() {
@@ -108,7 +109,6 @@ const Stoichiometry = lazy(() => import('@/pages/chemistry/stoichiometry'))
 const Kinetics = lazy(() => import('@/pages/chemistry/kinetics'))
 const Enthalpy = lazy(() => import('@/pages/chemistry/enthalpy'))
 const Equilibrium = lazy(() => import('@/pages/chemistry/equilibrium'))
-// const Titration = lazy(() => import('@/pages/chemistry/titration'))
 
 // Computer Science
 const CSHub = lazy(() => import('@/pages/cs/hub'))
@@ -140,11 +140,22 @@ const MarketStructures = lazy(() => import('@/pages/economics/market-structures'
 const LaborMarket = lazy(() => import('@/pages/economics/labor-market'))
 const LoanableFunds = lazy(() => import('@/pages/economics/loanable-funds'))
 const MoneyMarket = lazy(() => import('@/pages/economics/money-market'))
+const Elasticity = lazy(() => import('@/pages/economics/elasticity'))
+const LongRunCosts = lazy(() => import('@/pages/economics/long-run-costs'))
+const PriceDiscrimination = lazy(() => import('@/pages/economics/price-discrimination'))
+const Monopsony = lazy(() => import('@/pages/economics/monopsony'))
+const PublicGoods = lazy(() => import('@/pages/economics/public-goods'))
+const EconomicIndicators = lazy(() => import('@/pages/economics/economic-indicators'))
+const FiscalPolicy = lazy(() => import('@/pages/economics/fiscal-policy'))
+const MonetaryPolicy = lazy(() => import('@/pages/economics/monetary-policy'))
+const EconomicGrowth = lazy(() => import('@/pages/economics/economic-growth'))
+const BalanceOfPayments = lazy(() => import('@/pages/economics/balance-of-payments'))
 
 export default function App() {
     return (
         <BrowserRouter>
             <Layout>
+                <ErrorBoundary>
                 <Suspense fallback={<LoadingSpinner />}>
                     <AnimatePresence mode="wait">
                         <Routes>
@@ -246,7 +257,6 @@ export default function App() {
                             <Route path="/chemistry/kinetics" element={<Kinetics />} />
                             <Route path="/chemistry/enthalpy" element={<Enthalpy />} />
                             <Route path="/chemistry/equilibrium" element={<Equilibrium />} />
-                            {/* <Route path="/chemistry/titration" element={<Titration />} /> */}
 
                             {/* Computer Science */}
                             <Route path="/cs" element={<CSHub />} />
@@ -278,9 +288,20 @@ export default function App() {
                             <Route path="/economics/labor-market" element={<LaborMarket />} />
                             <Route path="/economics/loanable-funds" element={<LoanableFunds />} />
                             <Route path="/economics/money-market" element={<MoneyMarket />} />
+                            <Route path="/economics/elasticity" element={<Elasticity />} />
+                            <Route path="/economics/long-run-costs" element={<LongRunCosts />} />
+                            <Route path="/economics/price-discrimination" element={<PriceDiscrimination />} />
+                            <Route path="/economics/monopsony" element={<Monopsony />} />
+                            <Route path="/economics/public-goods" element={<PublicGoods />} />
+                            <Route path="/economics/economic-indicators" element={<EconomicIndicators />} />
+                            <Route path="/economics/fiscal-policy" element={<FiscalPolicy />} />
+                            <Route path="/economics/monetary-policy" element={<MonetaryPolicy />} />
+                            <Route path="/economics/economic-growth" element={<EconomicGrowth />} />
+                            <Route path="/economics/balance-of-payments" element={<BalanceOfPayments />} />
                         </Routes>
                     </AnimatePresence>
                 </Suspense>
+                </ErrorBoundary>
             </Layout>
         </BrowserRouter>
     )

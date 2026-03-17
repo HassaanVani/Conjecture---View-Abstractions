@@ -22,8 +22,6 @@ export default function EmWave() {
     const [waveSpeed, setWaveSpeed] = useState(1.0)
 
     const wavelength = 200 / frequency
-    const c = 3e8
-    const realFreq = c / (wavelength * 1e-9 * 1e6)
 
     const reset = () => {
         timeRef.current = 0
@@ -90,7 +88,6 @@ export default function EmWave() {
         window.addEventListener('resize', resize)
 
         const animate = () => {
-            const now = performance.now() / 1000
             timeRef.current += 0.016 * waveSpeed
             const t = timeRef.current
 

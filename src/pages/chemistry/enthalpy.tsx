@@ -137,7 +137,6 @@ export default function Enthalpy() {
 
     const animate = () => {
       frameRef.current++
-      const f = frameRef.current
       const w = canvas.offsetWidth
       const h = canvas.offsetHeight
 

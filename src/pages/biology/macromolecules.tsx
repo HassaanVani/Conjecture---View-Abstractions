@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { ControlPanel, ControlGroup, Slider, Button, ButtonGroup, Toggle } from '@/components/control-panel'
+import { Slider, Button, ButtonGroup, Toggle } from '@/components/control-panel'
 import { EquationDisplay } from '@/components/equation-display'
 import { InfoPanel, APTag } from '@/components/info-panel'
 import { DemoMode, useDemoMode } from '@/components/demo-mode'
@@ -434,7 +434,7 @@ function drawCarbohydrate(ctx: CanvasRenderingContext2D, t: number, rp: number, 
   }
 }
 
-function drawNucleicAcid(ctx: CanvasRenderingContext2D, t: number, rp: number, hydro: boolean) {
+function drawNucleicAcid(ctx: CanvasRenderingContext2D, _t: number, rp: number, hydro: boolean) {
   const sep = hydro ? 80 + rp * 40 : 80
   const bases = ['A', 'T', 'G', 'C']
   for (let i = 0; i < 4; i++) {

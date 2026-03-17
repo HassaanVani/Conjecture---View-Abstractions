@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { ControlPanel, ControlGroup, Slider, Button, ButtonGroup, Toggle } from '@/components/control-panel'
+import { Slider, Button, ButtonGroup } from '@/components/control-panel'
 import { EquationDisplay } from '@/components/equation-display'
 import { InfoPanel, APTag } from '@/components/info-panel'
 import { DemoMode, useDemoMode } from '@/components/demo-mode'
@@ -195,7 +195,6 @@ export default function Evolution() {
 
     const animate = () => {
       timeRef.current += 0.016
-      const t = timeRef.current
       const w = canvas.offsetWidth
       const h = canvas.offsetHeight
 

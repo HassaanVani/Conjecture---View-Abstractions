@@ -306,7 +306,6 @@ export default function NuclearDecay() {
     }, [isotopeIdx, n0, timeSlider, decayType, showGraph, showNuclei, showDaughters, animating, isotope, lambda, calcRemaining, getDaughter])
 
     const currentN = calcRemaining(timeSlider * 5)
-    const activity = lambda * currentN
     const daughter = getDaughter()
 
     return (

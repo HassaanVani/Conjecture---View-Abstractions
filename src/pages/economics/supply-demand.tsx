@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { APTag } from '@/components/info-panel'
+import { InfoPanel, APTag } from '@/components/info-panel'
+import { EquationDisplay } from '@/components/equation-display'
 
 type ControlType = 'none' | 'ceiling' | 'floor' | 'tax' | 'subsidy'
 
@@ -846,6 +847,28 @@ export default function SupplyDemand() {
                         </button>
                     ))}
                 </motion.div>
+
+                {/* Info Panel + Equations */}
+                <div className="absolute top-16 right-4 space-y-3 max-w-[240px]">
+                    <InfoPanel departmentColor="rgb(220, 180, 80)" title="Market Data" items={(() => {
+                        const eq = calculateEquilibrium()
+                        const surplus = getSurplusValues()
+                        const elast = getElasticity()
+                        return [
+                            { label: 'Eq. Price', value: `$${eq.P.toFixed(1)}`, color: 'rgb(220, 180, 80)' },
+                            { label: 'Eq. Quantity', value: eq.Q.toFixed(1), color: 'rgb(220, 180, 80)' },
+                            { label: 'Consumer Surplus', value: `$${surplus.consumerSurplus.toFixed(0)}`, color: 'rgba(239,68,68,0.9)' },
+                            { label: 'Producer Surplus', value: `$${surplus.producerSurplus.toFixed(0)}`, color: 'rgba(96,165,250,0.9)' },
+                            { label: 'Total Surplus', value: `$${surplus.totalSurplus.toFixed(0)}`, color: 'rgba(255,255,255,0.8)' },
+                            { label: 'Demand Elasticity', value: elast.demand.toFixed(2), color: 'rgba(239,68,68,0.7)' },
+                        ]
+                    })()} />
+                    <EquationDisplay departmentColor="rgb(220, 180, 80)" title="Key Equations" collapsed equations={[
+                        { label: 'Qd', expression: 'Qd = a - bP', description: 'Quantity demanded' },
+                        { label: 'Qs', expression: 'Qs = c + dP', description: 'Quantity supplied' },
+                        { label: 'Ed', expression: 'Ed = (%ΔQ)/(%ΔP)', description: 'Price elasticity of demand' },
+                    ]} />
+                </div>
 
                 {/* Determinants Button */}
                 <motion.div

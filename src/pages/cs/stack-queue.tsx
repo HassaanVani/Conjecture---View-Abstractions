@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { ControlPanel, ControlGroup, Slider, Button, ButtonGroup, NumberInput } from '@/components/control-panel'
+import { ControlPanel, ControlGroup, Button, ButtonGroup, NumberInput } from '@/components/control-panel'
 import { EquationDisplay } from '@/components/equation-display'
 import { InfoPanel, APTag } from '@/components/info-panel'
 import { DemoMode, useDemoMode } from '@/components/demo-mode'
@@ -201,7 +201,7 @@ export default function StackQueue() {
       ctx.stroke()
     }
 
-    const drawQueue = (ctx: CanvasRenderingContext2D, w: number, h: number) => {
+    const drawQueue = (ctx: CanvasRenderingContext2D, _w: number, h: number) => {
       const boxW = 60
       const boxH = 50
       const gap = 12

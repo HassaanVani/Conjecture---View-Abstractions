@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
-import { ControlPanel, ControlGroup, Slider, Select, ButtonGroup, Button } from '@/components/control-panel'
+import { ControlGroup, Slider, Select, ButtonGroup, Button } from '@/components/control-panel'
 import { EquationDisplay } from '@/components/equation-display'
 import { InfoPanel, APTag } from '@/components/info-panel'
 import { DemoMode, useDemoMode } from '@/components/demo-mode'
@@ -231,7 +231,6 @@ export default function Orbitals() {
         fdY += 20
 
         parsed.forEach(({ orbital, count }) => {
-          const maxE = orbital.includes('s') ? 2 : orbital.includes('p') ? 6 : 10
           const boxes = orbital.includes('s') ? 1 : orbital.includes('p') ? 3 : 5
 
           ctx.fillStyle = 'rgba(255,255,255,0.5)'

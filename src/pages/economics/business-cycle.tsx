@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
-import { ControlPanel, ControlGroup, Slider, Button, Toggle } from '@/components/control-panel'
+import { ControlPanel, ControlGroup, Slider, Button, Toggle, ButtonGroup } from '@/components/control-panel'
 import { EquationDisplay } from '@/components/equation-display'
 import { InfoPanel, APTag } from '@/components/info-panel'
 import { DemoMode, useDemoMode } from '@/components/demo-mode'
@@ -24,15 +24,22 @@ const phaseInfo: Record<Phase, PhaseInfo> = {
     expansion: { name: 'Expansion', description: 'Economy growing. GDP, employment, and incomes rising.', characteristics: ['Declining unemployment', 'Moderate inflation', 'Rising spending', 'Investment up'], color: 'rgba(100, 200, 150, 1)', policy: 'Monitor for overheating' },
 }
 
+const PHASE_ORDER: Phase[] = ['expansion', 'peak', 'recession', 'trough']
+const PHASE_TIMES: Record<Phase, number> = { expansion: 10, peak: 80, recession: 130, trough: 210 }
+
+const DEFAULTS = { speed: 1, showIndicators: true, animationTime: 0, isAnimating: true }
+
 export default function BusinessCycle() {
     const canvasRef = useRef<HTMLCanvasElement>(null)
     const [currentPhase, setCurrentPhase] = useState<Phase>('expansion')
-    const [animationTime, setAnimationTime] = useState(0)
-    const [isAnimating, setIsAnimating] = useState(true)
-    const [speed, setSpeed] = useState(1)
-    const [showIndicators, setShowIndicators] = useState(true)
+    const [animationTime, setAnimationTime] = useState(DEFAULTS.animationTime)
+    const [isAnimating, setIsAnimating] = useState(DEFAULTS.isAnimating)
+    const [speed, setSpeed] = useState(DEFAULTS.speed)
+    const [showIndicators, setShowIndicators] = useState(DEFAULTS.showIndicators)
 
-    const getGDPGrowth = useCallback((t: number) => 3 * Math.sin(t * 0.02) + 2, [])
+    const trendGrowth = 2.0
+
+    const getGDPGrowth = useCallback((t: number) => 3 * Math.sin(t * 0.02) + trendGrowth, [trendGrowth])
     const getUnemployment = useCallback((t: number) => 5 - 2 * Math.sin((t - 20) * 0.02), [])
     const getInflation = useCallback((t: number) => 2 + 1.5 * Math.sin((t - 15) * 0.02), [])
 
@@ -44,6 +51,13 @@ export default function BusinessCycle() {
         return 'trough'
     }, [])
 
+    const resetAll = useCallback(() => {
+        setAnimationTime(DEFAULTS.animationTime)
+        setIsAnimating(DEFAULTS.isAnimating)
+        setSpeed(DEFAULTS.speed)
+        setShowIndicators(DEFAULTS.showIndicators)
+    }, [])
+
     useEffect(() => { setCurrentPhase(determinePhase(animationTime)) }, [animationTime, determinePhase])
 
     useEffect(() => {
@@ -52,16 +66,55 @@ export default function BusinessCycle() {
         return () => clearInterval(interval)
     }, [isAnimating, speed])
 
+    // Derived values
+    const gdpGrowth = getGDPGrowth(animationTime)
+    const potentialGDP = trendGrowth + 3 // baseline potential
+    const gdpGap = ((gdpGrowth - potentialGDP) / potentialGDP) * 100
+    const unemployment = getUnemployment(animationTime)
+    const phase = phaseInfo[currentPhase]
+
     const demoSteps: DemoStep[] = useMemo(() => [
-        { title: 'The Business Cycle', description: 'Economies naturally fluctuate through periods of growth and contraction.', setup: () => { setIsAnimating(true); setAnimationTime(0) } },
-        { title: 'Expansion Phase', description: 'GDP grows, unemployment falls, consumer spending rises. The "good times."', setup: () => { setAnimationTime(10); setIsAnimating(false) } },
-        { title: 'Peak', description: 'Highest point of activity. Growth slows, inflation pressures build, economy overheating.', setup: () => { setAnimationTime(80); setIsAnimating(false) } },
-        { title: 'Recession', description: 'Two consecutive quarters of declining GDP. Unemployment rises, spending falls.', setup: () => { setAnimationTime(130); setIsAnimating(false) } },
-        { title: 'Trough', description: 'The lowest point. While painful, sets the stage for recovery.', setup: () => { setAnimationTime(210); setIsAnimating(false) } },
-        { title: 'Key Indicators', description: 'GDP, unemployment, and inflation move together with different timing (leads and lags).', setup: () => { setShowIndicators(true); setIsAnimating(true); setAnimationTime(0) } },
-        { title: 'Policy Responses', description: 'Fiscal policy (G, T) and monetary policy (interest rates, money supply) counter the cycle.', setup: () => { setIsAnimating(true); setAnimationTime(0) } },
-        { title: 'Explore', description: 'Click phase buttons to jump. Adjust speed. Watch how indicators relate to each phase.', setup: () => { setIsAnimating(true); setAnimationTime(0) } },
-    ], [])
+        {
+            title: 'Business Cycle Overview',
+            description: 'Economies naturally fluctuate through periods of growth and contraction around a long-run trend.',
+            setup: () => { resetAll() },
+        },
+        {
+            title: 'Expansion Phase',
+            description: 'GDP grows above trend, unemployment falls, consumer confidence and spending rise. The "good times."',
+            setup: () => { setAnimationTime(PHASE_TIMES.expansion); setIsAnimating(false); setShowIndicators(true) },
+        },
+        {
+            title: 'Peak',
+            description: 'Economy reaches maximum output. Growth decelerates, inflation pressures build, risk of overheating.',
+            setup: () => { setAnimationTime(PHASE_TIMES.peak); setIsAnimating(false); setShowIndicators(true) },
+        },
+        {
+            title: 'Contraction',
+            description: 'GDP declines for two consecutive quarters. Unemployment rises sharply, businesses cut investment.',
+            setup: () => { setAnimationTime(PHASE_TIMES.recession); setIsAnimating(false); setShowIndicators(true) },
+        },
+        {
+            title: 'Trough',
+            description: 'The economy bottoms out. While painful, low prices and interest rates set the stage for recovery.',
+            setup: () => { setAnimationTime(PHASE_TIMES.trough); setIsAnimating(false); setShowIndicators(true) },
+        },
+        {
+            title: 'GDP Gap',
+            description: 'The output gap measures the difference between actual and potential GDP. Positive = inflationary, negative = recessionary.',
+            setup: () => { setAnimationTime(PHASE_TIMES.recession); setIsAnimating(false); setShowIndicators(true) },
+        },
+        {
+            title: 'Leading Indicators',
+            description: 'GDP, unemployment, and inflation move together with different timing. Unemployment lags GDP; inflation often leads.',
+            setup: () => { setShowIndicators(true); setIsAnimating(true); setSpeed(1.5); setAnimationTime(0) },
+        },
+        {
+            title: 'Experiment',
+            description: 'Jump to any phase, adjust speed, toggle indicators. Watch how GDP, unemployment, and inflation relate to each phase.',
+            setup: () => { resetAll() },
+        },
+    ], [resetAll])
 
     const demo = useDemoMode(demoSteps)
 
@@ -96,8 +149,8 @@ export default function BusinessCycle() {
 
         // Phase shading
         for (let t = visStart; t < animationTime - 1; t += 1) {
-            const phase = determinePhase(t)
-            const info = phaseInfo[phase]
+            const p = determinePhase(t)
+            const info = phaseInfo[p]
             const x = pad.left + ((t - visStart) / cycleLen) * gW
             ctx.fillStyle = info.color.replace('1)', '0.05)')
             ctx.fillRect(x, pad.top, 3, gH)
@@ -154,11 +207,6 @@ export default function BusinessCycle() {
         return () => window.removeEventListener('resize', resize)
     }, [animationTime, currentPhase, showIndicators, determinePhase, getGDPGrowth, getUnemployment, getInflation])
 
-    const gdpGrowth = getGDPGrowth(animationTime)
-    const unemployment = getUnemployment(animationTime)
-    const inflation = getInflation(animationTime)
-    const phase = phaseInfo[currentPhase]
-
     return (
         <div className="h-[calc(100vh-64px)] flex flex-col bg-[#1a150a]">
             <div className="flex-1 relative">
@@ -167,45 +215,54 @@ export default function BusinessCycle() {
                 <div className="absolute top-4 left-4 space-y-3 max-w-[260px]">
                     <ControlPanel>
                         <ControlGroup label="Jump to Phase">
-                            <div className="flex flex-wrap gap-1">
-                                {(Object.keys(phaseInfo) as Phase[]).map(p => (
-                                    <button key={p} onClick={() => { setIsAnimating(false); const phases: Phase[] = ['expansion', 'peak', 'recession', 'trough']; setAnimationTime(10 + phases.indexOf(p) * 78) }}
-                                        className="px-2 py-1 rounded text-xs transition-all" style={{ backgroundColor: currentPhase === p ? phaseInfo[p].color.replace('1)', '0.2)') : 'rgba(255,255,255,0.05)', color: currentPhase === p ? phaseInfo[p].color : 'rgba(255,255,255,0.5)', border: `1px solid ${currentPhase === p ? phaseInfo[p].color : 'rgba(255,255,255,0.1)'}` }}>
-                                        {phaseInfo[p].name}
-                                    </button>
-                                ))}
-                            </div>
+                            <ButtonGroup
+                                value={currentPhase}
+                                onChange={v => { setIsAnimating(false); setAnimationTime(PHASE_TIMES[v as Phase]) }}
+                                options={PHASE_ORDER.map(p => ({ value: p, label: phaseInfo[p].name }))}
+                                color={GOLD}
+                            />
                         </ControlGroup>
                         <Toggle label="Show Indicators" value={showIndicators} onChange={setShowIndicators} />
                         <Slider label="Speed" value={speed} onChange={setSpeed} min={0.2} max={3} step={0.2} />
                         <div className="flex gap-2">
-                            <Button onClick={() => setIsAnimating(!isAnimating)}>{isAnimating ? 'Pause' : 'Play'}</Button>
-                            <Button onClick={() => { setAnimationTime(0); setIsAnimating(true) }} variant="secondary">Reset</Button>
+                            <Button onClick={() => setIsAnimating(!isAnimating)}>
+                                {isAnimating ? 'Pause' : 'Play'}
+                            </Button>
+                            <Button onClick={resetAll} variant="secondary">Reset</Button>
                             <Button onClick={demo.open} variant="secondary">Tutorial</Button>
                         </div>
                     </ControlPanel>
-                    <APTag course="Macroeconomics" unit="Unit 2" color={GOLD} />
+                    <APTag course="AP Macroeconomics" unit="Unit 2" color={GOLD} />
                 </div>
 
                 <div className="absolute top-4 right-4 space-y-3 max-w-[240px]">
-                    <InfoPanel departmentColor={phase.color} title={phase.name} items={[
-                        { label: 'GDP Growth', value: `${gdpGrowth >= 0 ? '+' : ''}${gdpGrowth.toFixed(1)}%`, color: gdpGrowth >= 0 ? 'rgba(100,200,150,1)' : 'rgba(255,100,100,1)' },
+                    <InfoPanel departmentColor={phase.color} title="Current Phase" items={[
+                        { label: 'Phase', value: phase.name, color: phase.color },
+                        { label: 'GDP Gap', value: `${gdpGap >= 0 ? '+' : ''}${gdpGap.toFixed(1)}%`, color: gdpGap >= 0 ? 'rgba(100,200,150,1)' : 'rgba(255,100,100,1)' },
                         { label: 'Unemployment', value: `${unemployment.toFixed(1)}%`, color: 'rgba(255,150,100,1)' },
-                        { label: 'Inflation', value: `${inflation.toFixed(1)}%`, color: 'rgba(150,100,255,1)' },
+                        { label: 'Trend Growth', value: `${trendGrowth.toFixed(1)}%`, color: 'rgba(220,180,80,0.8)' },
                     ]} />
                     <div className="backdrop-blur-xl bg-black/40 border border-white/10 rounded-xl px-4 py-3">
                         <p className="text-xs text-white/60 mb-2">{phase.description}</p>
                         <p className="text-xs text-white/40">Policy: {phase.policy}</p>
                     </div>
-                    <EquationDisplay departmentColor={GOLD} title="Key Concepts" collapsed equations={[
-                        { label: 'GDP', expression: 'Y = C + I + G + NX' },
-                        { label: 'Recession', expression: '2 consecutive quarters of negative GDP growth' },
-                        { label: 'Okun', expression: 'Each 1% above NRU = 2% output gap' },
+                    <EquationDisplay departmentColor={GOLD} title="Key Equations" collapsed equations={[
+                        { label: 'GDP Gap', expression: '(Actual - Potential) / Potential', description: 'Output gap percentage' },
+                        { label: "Okun's Law", expression: 'DeltaU ~ -0.5 x DeltaGDP', description: 'Unemployment-GDP relationship' },
                     ]} />
                 </div>
 
                 <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-40">
-                    <DemoMode steps={demoSteps} currentStep={demo.currentStep} isOpen={demo.isOpen} onClose={demo.close} onNext={demo.next} onPrev={demo.prev} onGoToStep={demo.goToStep} departmentColor={GOLD} />
+                    <DemoMode
+                        steps={demoSteps}
+                        currentStep={demo.currentStep}
+                        isOpen={demo.isOpen}
+                        onClose={demo.close}
+                        onNext={demo.next}
+                        onPrev={demo.prev}
+                        onGoToStep={demo.goToStep}
+                        departmentColor={GOLD}
+                    />
                 </div>
             </div>
         </div>

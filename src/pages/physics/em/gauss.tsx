@@ -174,7 +174,6 @@ export default function GaussLaw() {
                 const numLines = 12
                 for (const c of charges) {
                     for (let i = 0; i < numLines; i++) {
-                        const angle = (i / numLines) * Math.PI * 2
                         ctx.strokeStyle = c.q > 0 ? 'rgba(239, 68, 68, 0.25)' : 'rgba(59, 130, 246, 0.25)'
                         ctx.lineWidth = 1
                         ctx.beginPath()

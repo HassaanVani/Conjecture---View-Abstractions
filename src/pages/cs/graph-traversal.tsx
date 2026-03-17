@@ -1,11 +1,11 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { ControlPanel, ControlGroup, Slider, Button, ButtonGroup } from '@/components/control-panel'
 import { EquationDisplay } from '@/components/equation-display'
 import { InfoPanel, APTag } from '@/components/info-panel'
 import { DemoMode, useDemoMode } from '@/components/demo-mode'
 import type { DemoStep } from '@/components/demo-mode'
 
-const CS_COLOR = 'rgb(34, 211, 238)'
+const CS_TEAL = 'rgb(80, 200, 220)'
 
 type Algorithm = 'bfs' | 'dfs' | 'dijkstra' | 'astar'
 
@@ -25,13 +25,6 @@ interface VisitedNode {
     id: number
     parent: number | null
     distance: number
-}
-
-const ALGO_INFO: Record<Algorithm, { name: string; description: string; time: string; space: string }> = {
-    bfs: { name: 'BFS', description: 'Breadth-First Search -- explores level by level', time: 'O(V + E)', space: 'O(V)' },
-    dfs: { name: 'DFS', description: 'Depth-First Search -- explores as deep as possible first', time: 'O(V + E)', space: 'O(V)' },
-    dijkstra: { name: 'Dijkstra', description: "Dijkstra's Algorithm -- finds shortest weighted path", time: 'O((V+E) log V)', space: 'O(V)' },
-    astar: { name: 'A*', description: 'A* Search -- uses heuristic for optimal pathfinding', time: 'O(E log V)', space: 'O(V)' },
 }
 
 function generateGraph(): { nodes: Node[]; edges: Edge[] } {
@@ -86,6 +79,7 @@ export default function GraphTraversal() {
     const [path, setPath] = useState<number[]>([])
     const [frontier, setFrontier] = useState<number[]>([])
     const [pathWeight, setPathWeight] = useState(0)
+    const [edgesExplored, setEdgesExplored] = useState(0)
     const stopRef = useRef(false)
 
     const getNeighbors = useCallback((nodeId: number): { node: number; weight: number }[] => {
@@ -103,6 +97,17 @@ export default function GraphTraversal() {
         return Math.sqrt((nodeA.x - nodeB.x) ** 2 + (nodeA.y - nodeB.y) ** 2) / 50
     }, [nodes])
 
+    const reset = useCallback(() => {
+        stopRef.current = true
+        setIsRunning(false)
+        setVisited([])
+        setPath([])
+        setFrontier([])
+        setCurrentNode(null)
+        setPathWeight(0)
+        setEdgesExplored(0)
+    }, [])
+
     const runAlgorithm = useCallback(async () => {
         stopRef.current = false
         setIsRunning(true)
@@ -111,7 +116,9 @@ export default function GraphTraversal() {
         setFrontier([])
         setCurrentNode(null)
         setPathWeight(0)
+        setEdgesExplored(0)
 
+        let exploredCount = 0
         const d = (ms: number) => new Promise(r => setTimeout(r, ms))
         const visitedSet = new Set<number>()
         const parentMap = new Map<number, number | null>()
@@ -132,6 +139,8 @@ export default function GraphTraversal() {
                 await d(speed)
                 if (current === endNode) break
                 for (const { node: neighbor } of getNeighbors(current)) {
+                    exploredCount++
+                    setEdgesExplored(exploredCount)
                     if (!visitedSet.has(neighbor) && !queue.includes(neighbor)) {
                         queue.push(neighbor)
                         parentMap.set(neighbor, current)
@@ -152,6 +161,8 @@ export default function GraphTraversal() {
                 await d(speed)
                 if (current === endNode) break
                 for (const { node: neighbor } of getNeighbors(current)) {
+                    exploredCount++
+                    setEdgesExplored(exploredCount)
                     if (!visitedSet.has(neighbor)) {
                         stack.push(neighbor)
                         if (!parentMap.has(neighbor)) {
@@ -175,6 +186,8 @@ export default function GraphTraversal() {
                 await d(speed)
                 if (current === endNode) break
                 for (const { node: neighbor, weight } of getNeighbors(current)) {
+                    exploredCount++
+                    setEdgesExplored(exploredCount)
                     if (!visitedSet.has(neighbor)) {
                         const newDist = dist + weight
                         const existingDist = distanceMap.get(neighbor) ?? Infinity
@@ -201,6 +214,8 @@ export default function GraphTraversal() {
                 await d(speed)
                 if (current === endNode) break
                 for (const { node: neighbor, weight } of getNeighbors(current)) {
+                    exploredCount++
+                    setEdgesExplored(exploredCount)
                     if (!visitedSet.has(neighbor)) {
                         const newG = g + weight
                         const existingG = distanceMap.get(neighbor) ?? Infinity
@@ -223,7 +238,6 @@ export default function GraphTraversal() {
         }
         setPath(reconstructedPath)
 
-        // Calculate total path weight
         let totalWeight = 0
         for (let i = 0; i < reconstructedPath.length - 1; i++) {
             const from = reconstructedPath[i]
@@ -236,16 +250,6 @@ export default function GraphTraversal() {
         setIsRunning(false)
     }, [algorithm, startNode, endNode, speed, getNeighbors, heuristic, edges])
 
-    const reset = useCallback(() => {
-        stopRef.current = true
-        setIsRunning(false)
-        setVisited([])
-        setPath([])
-        setFrontier([])
-        setCurrentNode(null)
-        setPathWeight(0)
-    }, [])
-
     const regenerateGraph = useCallback(() => {
         reset()
         const g = generateGraph()
@@ -253,6 +257,8 @@ export default function GraphTraversal() {
         setStartNode(0)
         setEndNode(g.nodes.length - 1)
     }, [reset])
+
+    const queueOrStackLabel = algorithm === 'bfs' ? 'Queue Size' : algorithm === 'dfs' ? 'Stack Size' : 'PQ Size'
 
     // Canvas rendering
     useEffect(() => {
@@ -289,7 +295,7 @@ export default function GraphTraversal() {
                     (path[i] === edge.to && path[i + 1] === edge.from))
             )
 
-            ctx.strokeStyle = isInPath ? 'rgba(34, 211, 238, 0.8)' : 'rgba(34, 211, 238, 0.15)'
+            ctx.strokeStyle = isInPath ? 'rgba(80, 200, 220, 0.8)' : 'rgba(80, 200, 220, 0.15)'
             ctx.lineWidth = isInPath ? 4 : 2
             ctx.beginPath()
             ctx.moveTo(from.x, from.y)
@@ -300,16 +306,15 @@ export default function GraphTraversal() {
             if (algorithm === 'dijkstra' || algorithm === 'astar') {
                 const midX = (from.x + to.x) / 2
                 const midY = (from.y + to.y) / 2
-                ctx.fillStyle = isInPath ? 'rgba(34, 211, 238, 0.9)' : 'rgba(34, 211, 238, 0.4)'
+                ctx.fillStyle = isInPath ? 'rgba(80, 200, 220, 0.9)' : 'rgba(80, 200, 220, 0.4)'
                 ctx.font = '11px monospace'
                 ctx.textAlign = 'center'
                 ctx.fillText(edge.weight.toString(), midX, midY - 5)
             }
         })
 
-        // Draw shortest path weight along path
+        // Draw path direction arrows
         if (path.length > 1) {
-            // Draw path direction arrows
             for (let i = 0; i < path.length - 1; i++) {
                 const from = nodes[path[i]]
                 const to = nodes[path[i + 1]]
@@ -320,7 +325,7 @@ export default function GraphTraversal() {
                 ctx.save()
                 ctx.translate(mx, my)
                 ctx.rotate(angle)
-                ctx.fillStyle = 'rgba(34, 211, 238, 0.7)'
+                ctx.fillStyle = 'rgba(80, 200, 220, 0.7)'
                 ctx.beginPath()
                 ctx.moveTo(6, 0)
                 ctx.lineTo(-4, -4)
@@ -341,14 +346,14 @@ export default function GraphTraversal() {
             const isInPath = path.includes(node.id)
 
             let fillColor = 'rgba(20, 40, 50, 0.9)'
-            let strokeColor = 'rgba(34, 211, 238, 0.3)'
+            let strokeColor = 'rgba(80, 200, 220, 0.3)'
             let radius = 22
 
             if (isStart) { fillColor = 'rgba(80, 200, 120, 0.9)'; strokeColor = 'rgba(80, 200, 120, 0.6)' }
             else if (isEnd) { fillColor = 'rgba(255, 100, 100, 0.9)'; strokeColor = 'rgba(255, 100, 100, 0.6)' }
             else if (isCurrent) { fillColor = 'rgba(255, 200, 80, 0.9)'; strokeColor = 'rgba(255, 200, 80, 0.8)'; radius = 28 }
-            else if (isInPath) { fillColor = 'rgba(34, 211, 238, 0.9)'; strokeColor = 'rgba(34, 211, 238, 0.8)' }
-            else if (isVisited) { fillColor = 'rgba(34, 150, 180, 0.6)' }
+            else if (isInPath) { fillColor = 'rgba(80, 200, 220, 0.9)'; strokeColor = 'rgba(80, 200, 220, 0.8)' }
+            else if (isVisited) { fillColor = 'rgba(60, 150, 180, 0.6)' }
             else if (isInFrontier) { strokeColor = 'rgba(255, 200, 80, 0.5)' }
 
             if (isCurrent) {
@@ -385,43 +390,61 @@ export default function GraphTraversal() {
         return () => window.removeEventListener('resize', resize)
     }, [nodes, edges, visited, currentNode, path, frontier, startNode, endNode, algorithm])
 
-    const demoSteps: DemoStep[] = [
-        { title: 'Graph Traversal', description: 'Graph traversal visits all reachable nodes from a starting point. Different algorithms explore in different orders.', setup: () => { setAlgorithm('bfs'); reset() } },
-        { title: 'BFS: Breadth-First', description: 'BFS uses a queue (FIFO). It explores all neighbors at the current depth before moving deeper. Guarantees shortest path in unweighted graphs.', setup: () => { setAlgorithm('bfs'); reset() } },
-        { title: 'DFS: Depth-First', description: 'DFS uses a stack (LIFO). It goes as deep as possible before backtracking. Uses less memory but does NOT guarantee shortest path.', setup: () => { setAlgorithm('dfs'); reset() } },
-        { title: "Dijkstra's Algorithm", description: 'Dijkstra uses a priority queue sorted by cumulative distance. It guarantees the shortest weighted path. Note edge weights on the graph.', setup: () => { setAlgorithm('dijkstra'); reset() } },
-        { title: 'A* Search', description: 'A* adds a heuristic h(n) to guide the search toward the goal. f(n) = g(n) + h(n). More efficient than Dijkstra when a good heuristic exists.', setup: () => { setAlgorithm('astar'); reset() } },
-        { title: 'BFS vs DFS', description: 'BFS finds shortest unweighted path but explores more nodes. DFS may find a path faster but it might not be the shortest.', highlight: 'Try running BFS then DFS and compare nodes visited.', setup: () => { setAlgorithm('bfs'); reset() } },
-        { title: 'Shortest Path', description: 'After the algorithm finishes, the shortest path is highlighted in cyan. For weighted graphs, this is the minimum-weight path.', setup: () => { setAlgorithm('dijkstra'); reset() } },
-        { title: 'Explore', description: 'Try different start/end nodes. Regenerate the graph for new layouts. Compare how many nodes each algorithm visits.', setup: () => { setAlgorithm('bfs'); reset() } },
-    ]
+    const demoSteps: DemoStep[] = useMemo(() => [
+        {
+            title: 'Graph Representation',
+            description: 'A graph is a set of vertices (nodes) connected by edges. This grid graph has weighted edges. Adjacency lists or matrices store the connections.',
+            setup: () => { setAlgorithm('bfs'); reset() },
+        },
+        {
+            title: 'BFS: Level-Order',
+            description: 'BFS visits all nodes at distance d before any node at distance d+1. It explores the graph in concentric layers from the start node.',
+            setup: () => { setAlgorithm('bfs'); reset() },
+        },
+        {
+            title: 'BFS: The Queue',
+            description: 'BFS uses a FIFO queue. Neighbors are enqueued, and the front of the queue is dequeued next. This guarantees level-order traversal.',
+            highlight: 'Watch the frontier (queue) grow and shrink as BFS runs.',
+            setup: () => { setAlgorithm('bfs'); reset() },
+        },
+        {
+            title: 'DFS: Depth-First',
+            description: 'DFS plunges as deep as possible before backtracking. It follows one path to a dead end, then retreats to explore alternatives.',
+            setup: () => { setAlgorithm('dfs'); reset() },
+        },
+        {
+            title: 'DFS: Stack / Recursion',
+            description: 'DFS uses a LIFO stack (or the call stack via recursion). The most recently discovered node is explored first.',
+            highlight: 'Compare the stack-based frontier to the BFS queue.',
+            setup: () => { setAlgorithm('dfs'); reset() },
+        },
+        {
+            title: 'Shortest Path',
+            description: 'BFS guarantees the shortest path in unweighted graphs. For weighted graphs, Dijkstra finds the minimum-cost path using a priority queue.',
+            setup: () => { setAlgorithm('dijkstra'); reset() },
+        },
+        {
+            title: 'Connected Components',
+            description: 'Both BFS and DFS can find all nodes reachable from a source. Running traversal from every unvisited node identifies all connected components.',
+            setup: () => { setAlgorithm('bfs'); reset() },
+        },
+        {
+            title: 'BFS vs DFS Comparison',
+            description: 'BFS: optimal unweighted shortest path, more memory. DFS: less memory, useful for cycle detection and topological sort, but no shortest-path guarantee.',
+            highlight: 'Run both algorithms and compare nodes visited and path found.',
+            setup: () => { setAlgorithm('bfs'); reset() },
+        },
+    ], [reset])
 
     const demo = useDemoMode(demoSteps)
 
     return (
         <div className="h-[calc(100vh-64px)] flex flex-col bg-[#0a1a1a]">
-            <div className="flex-1 relative flex">
-                <div className="flex-1 relative">
-                    <canvas ref={canvasRef} className="w-full h-full" />
+            <div className="flex-1 relative">
+                <canvas ref={canvasRef} className="w-full h-full" />
 
-                    <div className="absolute top-4 left-4 space-y-3 w-64">
-                        <APTag course="CS A" unit="Unit 10" color={CS_COLOR} />
-                        <EquationDisplay
-                            departmentColor={CS_COLOR}
-                            title="Algorithm"
-                            equations={[
-                                { label: 'Time', expression: ALGO_INFO[algorithm].time },
-                                { label: 'Space', expression: ALGO_INFO[algorithm].space },
-                                ...(algorithm === 'astar' ? [{ label: 'A*', expression: 'f(n) = g(n) + h(n)', description: 'g = cost so far, h = heuristic' }] : []),
-                                ...(algorithm === 'dijkstra' ? [{ label: 'Relax', expression: 'd[v] = min(d[v], d[u]+w(u,v))', description: 'Greedy relaxation' }] : []),
-                                ...(algorithm === 'bfs' ? [{ label: 'Queue', expression: 'FIFO order', description: 'Level-by-level exploration' }] : []),
-                                ...(algorithm === 'dfs' ? [{ label: 'Stack', expression: 'LIFO order', description: 'Deepest node first' }] : []),
-                            ]}
-                        />
-                    </div>
-                </div>
-
-                <div className="w-60 bg-[#0a1a1a]/90 border-l border-white/10 p-4 flex flex-col gap-3 overflow-y-auto z-20">
+                {/* Controls — top-left */}
+                <div className="absolute top-4 left-4 space-y-3 max-w-[260px]">
                     <ControlPanel>
                         <ButtonGroup
                             label="Algorithm"
@@ -433,7 +456,7 @@ export default function GraphTraversal() {
                                 { value: 'dijkstra', label: 'Djk' },
                                 { value: 'astar', label: 'A*' },
                             ]}
-                            color={CS_COLOR}
+                            color={CS_TEAL}
                         />
                         <ControlGroup label="Start Node">
                             <select
@@ -455,43 +478,59 @@ export default function GraphTraversal() {
                                 {nodes.map(n => <option key={n.id} value={n.id}>{n.id}</option>)}
                             </select>
                         </ControlGroup>
-                        <Slider label={`Speed`} value={550 - speed} onChange={v => setSpeed(550 - v)} min={50} max={500} />
+                        <Slider label="Speed" value={550 - speed} onChange={v => setSpeed(550 - v)} min={50} max={500} />
                         <div className="flex gap-2">
                             <Button onClick={runAlgorithm} disabled={isRunning}>
                                 {isRunning ? 'Running...' : 'Run'}
                             </Button>
-                            <Button onClick={reset} variant="secondary" disabled={isRunning}>Reset</Button>
+                            <Button onClick={reset} variant="secondary">Reset</Button>
                         </div>
-                        <Button onClick={regenerateGraph} variant="secondary" disabled={isRunning}>New Graph</Button>
-                        <Button onClick={demo.open} variant="secondary">AP Tutorial</Button>
+                        <div className="flex gap-2">
+                            <Button onClick={regenerateGraph} variant="secondary" disabled={isRunning}>New Graph</Button>
+                            <Button onClick={demo.open} variant="secondary">Tutorial</Button>
+                        </div>
                     </ControlPanel>
+                    <APTag course="AP CS A" unit="Unit 10" color={CS_TEAL} />
+                </div>
 
+                {/* Info + Equations — top-right */}
+                <div className="absolute top-4 right-4 space-y-3 max-w-[240px]">
                     <InfoPanel
                         title="Traversal Data"
-                        departmentColor={CS_COLOR}
+                        departmentColor={CS_TEAL}
                         items={[
-                            { label: 'Algorithm', value: ALGO_INFO[algorithm].name },
-                            { label: 'Nodes Visited', value: visited.length },
+                            { label: 'Nodes Visited', value: visited.length, color: CS_TEAL },
+                            { label: 'Edges Explored', value: edgesExplored },
+                            { label: queueOrStackLabel, value: frontier.length },
                             { label: 'Path Length', value: path.length > 0 ? path.length : '--' },
                             { label: 'Path Weight', value: pathWeight > 0 ? pathWeight : '--' },
-                            { label: 'Frontier Size', value: frontier.length },
-                            { label: 'Total Nodes', value: nodes.length },
+                        ]}
+                    />
+                    <EquationDisplay
+                        departmentColor={CS_TEAL}
+                        title="Complexity"
+                        collapsed
+                        equations={[
+                            { label: 'BFS', expression: 'O(V + E)', description: 'Breadth-first time complexity' },
+                            { label: 'DFS', expression: 'O(V + E)', description: 'Depth-first time complexity' },
+                            { label: 'Shortest', expression: 'BFS on unweighted', description: 'BFS guarantees shortest path' },
                         ]}
                     />
                 </div>
-            </div>
 
-            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-30">
-                <DemoMode
-                    steps={demoSteps}
-                    currentStep={demo.currentStep}
-                    isOpen={demo.isOpen}
-                    onClose={demo.close}
-                    onNext={demo.next}
-                    onPrev={demo.prev}
-                    onGoToStep={demo.goToStep}
-                    departmentColor={CS_COLOR}
-                />
+                {/* DemoMode — bottom center */}
+                <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-40">
+                    <DemoMode
+                        steps={demoSteps}
+                        currentStep={demo.currentStep}
+                        isOpen={demo.isOpen}
+                        onClose={demo.close}
+                        onNext={demo.next}
+                        onPrev={demo.prev}
+                        onGoToStep={demo.goToStep}
+                        departmentColor={CS_TEAL}
+                    />
+                </div>
             </div>
         </div>
     )

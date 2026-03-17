@@ -301,7 +301,7 @@ export default function MoneyMarket() {
             if (Math.abs(animatedMs - targetMs) > 2) {
                 const currentI = eq.i
                 const surplusI = currentI + 1.5
-                const shortageI = currentI - 1.5
+
 
                 if (surplusI < maxI) {
                     ctx.fillStyle = 'rgba(100, 200, 150, 0.08)'

@@ -18,7 +18,7 @@ export default function Ampere() {
     const [turns, setTurns] = useState(20)
     const [config, setConfig] = useState<Config>('wire')
     const [loopRadius, setLoopRadius] = useState(80)
-    const [showLoop, setShowLoop] = useState(true)
+    const [showLoop, _setShowLoop] = useState(true)
 
     const demoSteps: DemoStep[] = [
         {

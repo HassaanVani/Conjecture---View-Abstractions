@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { ControlPanel, ControlGroup, Button, ButtonGroup, Toggle, Select } from '@/components/control-panel'
+import { ControlPanel, ControlGroup, Button, Toggle, Select } from '@/components/control-panel'
 import { EquationDisplay } from '@/components/equation-display'
 import { InfoPanel, APTag } from '@/components/info-panel'
 import { DemoMode, useDemoMode, type DemoStep } from '@/components/demo-mode'
@@ -163,7 +163,6 @@ export default function MolecularBonds() {
                 if (!a1 || !a2) return
                 const dx = a2.x - a1.x
                 const dy = a2.y - a1.y
-                const dist = Math.hypot(dx, dy)
                 const angle = Math.atan2(dy, dx)
 
                 if (bond.type === 'ionic') {

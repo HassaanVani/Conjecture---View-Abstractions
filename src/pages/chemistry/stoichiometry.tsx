@@ -196,7 +196,6 @@ export default function Stoichiometry() {
       rxn.products.forEach((p, pi) => {
         const cx = arrowX + 30 + pi * colW + colW / 2
         const moles = productMoles[pi]
-        const mass = productMasses[pi]
         const ballCount = Math.min(Math.round(moles * 3), 30)
 
         ctx.fillStyle = p.color
@@ -307,7 +306,7 @@ export default function Stoichiometry() {
             items={[
               { label: 'Limiting Reagent', value: rxn.reactants[limitingIdx]?.name ?? '-', color: 'rgba(255,100,100,0.9)' },
               ...rxn.products.map((p, i) => ({ label: `Yield (${p.name})`, value: `${productMasses[i].toFixed(2)} g` })),
-              ...excessAmounts.filter(e => e > 0).map((e, i) => ({ label: `Excess`, value: `${e.toFixed(2)} mol`, color: 'rgba(255,200,80,0.8)' })),
+              ...excessAmounts.filter(e => e > 0).map((e, _i) => ({ label: `Excess`, value: `${e.toFixed(2)} mol`, color: 'rgba(255,200,80,0.8)' })),
             ]}
           />
           <EquationDisplay

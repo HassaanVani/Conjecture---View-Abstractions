@@ -100,7 +100,7 @@ export default function DCCircuit() {
         window.addEventListener('resize', resize)
 
         let animId: number
-        const { rTotal, iTotal, resistorData } = calc()
+        const { rTotal: _rTotal, iTotal, resistorData } = calc()
 
         const draw = () => {
             animTime.current += 0.02

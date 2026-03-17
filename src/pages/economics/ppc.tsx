@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { motion } from 'framer-motion'
 import { EquationDisplay } from '@/components/equation-display'
 import { InfoPanel, APTag } from '@/components/info-panel'
 import { DemoMode, useDemoMode, type DemoStep } from '@/components/demo-mode'
@@ -16,7 +15,7 @@ export default function ProductionPossibilities() {
     const [shiftFactor, setShiftFactor] = useState(0)
     const [isDragging, setIsDragging] = useState(false)
     const [showGrowthAnimation, setShowGrowthAnimation] = useState(false)
-    const [growthFrame, setGrowthFrame] = useState(0)
+    const [_growthFrame, setGrowthFrame] = useState(0)
     const goodA = 'Consumer Goods'
     const goodB = 'Capital Goods'
 

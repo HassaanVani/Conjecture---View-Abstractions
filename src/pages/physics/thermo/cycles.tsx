@@ -33,8 +33,6 @@ export default function HeatEngineCycles() {
         if (cycleType === 'carnot') {
             const V1 = 1
             const V2 = V1 / r
-            const P1 = nR * Tc / V1
-            const P2 = nR * Tc / V2
 
             // Isothermal compression Tc: 1->2
             const iso1: PVPoint[] = []
@@ -122,7 +120,6 @@ export default function HeatEngineCycles() {
         const T2 = Tc * Math.pow(r, gamma - 1)
         const T3 = Th
         const V3 = V2 * (T3 / T2)
-        const cutoffRatio = V3 / V2
         const T4 = T3 * Math.pow(V3 / V1, gamma - 1)
 
         // Adiabatic compression 1->2

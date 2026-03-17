@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { ControlPanel, ControlGroup, Slider, Button, ButtonGroup, Toggle } from '@/components/control-panel'
+import { Slider, Button, ButtonGroup, Toggle } from '@/components/control-panel'
 import { EquationDisplay } from '@/components/equation-display'
 import { InfoPanel, APTag } from '@/components/info-panel'
 import { DemoMode, useDemoMode } from '@/components/demo-mode'
@@ -114,8 +114,6 @@ export default function DNAReplication() {
       const t = timeRef.current
       const w = canvas.offsetWidth
       const h = canvas.offsetHeight
-      const cx = w / 2
-      const cy = h / 2
 
       ctx.fillStyle = '#0a1a12'
       ctx.fillRect(0, 0, w, h)
