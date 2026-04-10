@@ -286,7 +286,7 @@ export default function ThinLenses() {
                     </div>
                     <APTag course="Physics 2" unit="Unit 6" color={PHYSICS_COLOR} />
                 </div>
-                <Button onClick={demo.open} variant="secondary">Demo Mode</Button>
+                <Button onClick={demo.open} variant="secondary">AP Tutorial</Button>
             </div>
 
             <div className="flex-1 relative flex">
@@ -316,7 +316,7 @@ export default function ThinLenses() {
                     </div>
                 </div>
 
-                <div className="w-72 bg-[#0d0a1a]/90 border-l border-white/10 p-5 flex flex-col gap-4 overflow-y-auto no-scrollbar z-20">
+                <div className="w-80 bg-[#0d0a1a]/90 border-l border-white/10 p-6 flex flex-col gap-5 overflow-y-auto no-scrollbar z-20">
                     <ControlPanel>
                         <ButtonGroup label="Lens Type" value={lensType} onChange={v => setLensType(v as LensType)}
                             options={[{ value: 'convex', label: 'Convex (+)' }, { value: 'concave', label: 'Concave (-)' }]}
@@ -342,10 +342,15 @@ export default function ThinLenses() {
                             </>
                         )}
                     </ControlPanel>
+
+                    <div className="flex gap-2">
+                        <Button onClick={demo.open} className="flex-1">AP Tutorial</Button>
+                        <Button onClick={() => { setLensType('convex'); setFocalLength(120); setObjectDist(250); setObjectHeight(70); setShowSecondLens(false); setLens2Offset(200); setLens2Focal(100) }} variant="secondary">Reset</Button>
+                    </div>
                 </div>
             </div>
 
-            <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-30">
+            <div className="absolute bottom-4 left-4 z-30">
                 <DemoMode steps={demoSteps} currentStep={demo.currentStep} isOpen={demo.isOpen} onClose={demo.close} onNext={demo.next} onPrev={demo.prev} onGoToStep={demo.goToStep} departmentColor={PHYSICS_COLOR} />
             </div>
         </div>

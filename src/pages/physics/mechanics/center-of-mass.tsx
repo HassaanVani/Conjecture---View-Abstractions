@@ -381,7 +381,7 @@ export default function CenterOfMass() {
                     </ControlPanel>
                 </div>
 
-                <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10">
+                <div className="absolute bottom-4 left-4 z-10">
                     <DemoMode
                         steps={demoSteps}
                         currentStep={demo.currentStep}

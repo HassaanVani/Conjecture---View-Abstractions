@@ -225,7 +225,7 @@ export default function FluidFlow() {
                 </div>
                 <div className="flex items-center gap-3">
                     <APTag course="Physics 2" unit="Unit 1" color={PC} />
-                    <Button onClick={demo.open} variant="secondary">Demo Mode</Button>
+                    <Button onClick={demo.open} variant="secondary">AP Tutorial</Button>
                 </div>
             </div>
 
@@ -253,7 +253,7 @@ export default function FluidFlow() {
                     </div>
 
                     {demo.isOpen && (
-                        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-30">
+                        <div className="absolute bottom-4 left-4 z-30">
                             <DemoMode steps={demoSteps} currentStep={demo.currentStep} isOpen={demo.isOpen} onClose={demo.close} onNext={demo.next} onPrev={demo.prev} onGoToStep={demo.goToStep} departmentColor={PC} />
                         </div>
                     )}
@@ -272,7 +272,10 @@ export default function FluidFlow() {
                     <Toggle label="Show Streamlines" value={showParticles} onChange={setShowParticles} />
                     <Toggle label="Pressure Gauges" value={showGauges} onChange={setShowGauges} />
 
-                    <Button onClick={demo.open} variant="secondary" className="w-full">Start Tutorial</Button>
+                    <div className="flex gap-2">
+                        <Button onClick={demo.open} className="flex-1">AP Tutorial</Button>
+                        <Button onClick={() => { setConstriction(0.5); setFlowRate(5); setShowParticles(true); setShowGauges(true); setScenario('pipe') }} variant="secondary">Reset</Button>
+                    </div>
                 </div>
             </div>
         </div>

@@ -218,7 +218,7 @@ export default function DragSimulation() {
                     </div>
                 </div>
                 <div className="flex items-center gap-3">
-                    <button onClick={demo.open} className="px-3 py-1.5 rounded-lg text-xs font-medium bg-purple-500/20 text-purple-300 hover:bg-purple-500/30 transition-colors">AP Tutorial</button>
+                    <Button onClick={demo.open} variant="secondary">AP Tutorial</Button>
                     <span className="text-xs text-white/40 font-mono">t = {stateRef.current.t.toFixed(2)}s</span>
                 </div>
             </div>

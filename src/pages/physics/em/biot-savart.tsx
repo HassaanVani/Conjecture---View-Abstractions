@@ -311,7 +311,7 @@ export default function BiotSavart() {
                         <APTag course="Physics C: E&M" unit="Unit 3" color={PURPLE} />
                     </div>
                 </div>
-                <Button variant="secondary" onClick={demo.open}>Tutorial</Button>
+                <Button variant="secondary" onClick={demo.open}>AP Tutorial</Button>
             </div>
 
             <div className="flex-1 relative flex">
@@ -356,7 +356,7 @@ export default function BiotSavart() {
                     </div>
 
                     {/* Demo overlay */}
-                    <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-30">
+                    <div className="absolute bottom-4 left-4 z-30">
                         <DemoMode
                             steps={demoSteps}
                             currentStep={demo.currentStep}

@@ -176,7 +176,7 @@ export default function Orbit() {
                 </div>
                 <div className="flex items-center gap-3">
                     <APTag course="Physics 1" unit="Unit 3" color={PC} />
-                    <Button onClick={demo.open} variant="secondary">Demo Mode</Button>
+                    <Button onClick={demo.open} variant="secondary">AP Tutorial</Button>
                 </div>
             </div>
 
@@ -207,7 +207,7 @@ export default function Orbit() {
                     </div>
 
                     {demo.isOpen && (
-                        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-30">
+                        <div className="absolute bottom-4 left-4 z-30">
                             <DemoMode steps={demoSteps} currentStep={demo.currentStep} isOpen={demo.isOpen} onClose={demo.close} onNext={demo.next} onPrev={demo.prev} onGoToStep={demo.goToStep} departmentColor={PC} />
                         </div>
                     )}

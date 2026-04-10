@@ -437,7 +437,7 @@ export default function RLC() {
                                 {isRunning ? 'Pause' : 'Play'}
                             </Button>
                             <Button variant="secondary" onClick={reset}>Reset</Button>
-                            <Button onClick={demo.open} variant="secondary">Tutorial</Button>
+                            <Button onClick={demo.open} variant="secondary">AP Tutorial</Button>
                         </div>
                     </ControlPanel>
                     <APTag course="Physics C: E&M" unit="Unit 4" color={PURPLE} />
@@ -460,7 +460,7 @@ export default function RLC() {
                 </div>
 
                 {/* Demo — bottom center */}
-                <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-40">
+                <div className="absolute bottom-4 left-4 z-40">
                     <DemoMode steps={demoSteps} currentStep={demo.currentStep} isOpen={demo.isOpen} onClose={demo.close} onNext={demo.next} onPrev={demo.prev} onGoToStep={demo.goToStep} departmentColor={PURPLE} />
                 </div>
             </div>

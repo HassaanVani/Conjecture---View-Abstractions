@@ -254,7 +254,7 @@ export default function MagneticParticle() {
                     </div>
                     <APTag course="Physics 2" unit="Unit 5" color={PHYSICS_COLOR} />
                 </div>
-                <Button onClick={demo.open} variant="secondary">Demo Mode</Button>
+                <Button onClick={demo.open} variant="secondary">AP Tutorial</Button>
             </div>
 
             <div className="flex-1 relative flex">
@@ -281,7 +281,7 @@ export default function MagneticParticle() {
                     </div>
                 </div>
 
-                <div className="w-72 bg-[#0d0a1a]/90 border-l border-white/10 p-5 flex flex-col gap-4 overflow-y-auto no-scrollbar z-20">
+                <div className="w-80 bg-[#0d0a1a]/90 border-l border-white/10 p-6 flex flex-col gap-5 overflow-y-auto no-scrollbar z-20">
                     <ControlPanel>
                         <Button onClick={fire}>Fire Particle</Button>
                         <ButtonGroup label="Mode" value={simMode} onChange={v => setSimMode(v as SimMode)}
@@ -311,10 +311,12 @@ export default function MagneticParticle() {
                             <Slider value={mass} onChange={setMass} min={0.5} max={5} step={0.5} label={`${mass} u`} />
                         </ControlGroup>
                     </ControlPanel>
+
+                    <Button onClick={() => { setBField(1); setVelocity(5); setCharge(1); setMass(1); setSimMode('basic' as SimMode) }} variant="secondary">Reset</Button>
                 </div>
             </div>
 
-            <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-30">
+            <div className="absolute bottom-4 left-4 z-30">
                 <DemoMode steps={demoSteps} currentStep={demo.currentStep} isOpen={demo.isOpen} onClose={demo.close} onNext={demo.next} onPrev={demo.prev} onGoToStep={demo.goToStep} departmentColor={PHYSICS_COLOR} />
             </div>
         </div>

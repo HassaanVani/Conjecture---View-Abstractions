@@ -289,7 +289,7 @@ export default function SnellsLaw() {
                     </div>
                     <APTag course="Physics 2" unit="Unit 6" color={PHYSICS_COLOR} />
                 </div>
-                <Button onClick={demo.open} variant="secondary">Demo Mode</Button>
+                <Button onClick={demo.open} variant="secondary">AP Tutorial</Button>
             </div>
 
             <div className="flex-1 relative flex">
@@ -318,7 +318,7 @@ export default function SnellsLaw() {
                     </div>
                 </div>
 
-                <div className="w-72 bg-[#0d0a1a]/90 border-l border-white/10 p-5 flex flex-col gap-4 overflow-y-auto no-scrollbar z-20">
+                <div className="w-80 bg-[#0d0a1a]/90 border-l border-white/10 p-6 flex flex-col gap-5 overflow-y-auto no-scrollbar z-20">
                     <ControlPanel>
                         <Select label="Material Preset" value={preset} onChange={setPreset} options={MATERIAL_PRESETS} />
                         <ControlGroup label="Index n1 (top)">
@@ -334,10 +334,15 @@ export default function SnellsLaw() {
                             </Button>
                         )}
                     </ControlPanel>
+
+                    <div className="flex gap-2">
+                        <Button onClick={demo.open} className="flex-1">AP Tutorial</Button>
+                        <Button onClick={() => { setPreset('air-glass'); setN1(1.0); setN2(1.5); setSourceX(250); setSourceY(150); setShowCritical(true); setAnimateTIR(false) }} variant="secondary">Reset</Button>
+                    </div>
                 </div>
             </div>
 
-            <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-30">
+            <div className="absolute bottom-4 left-4 z-30">
                 <DemoMode steps={demoSteps} currentStep={demo.currentStep} isOpen={demo.isOpen} onClose={demo.close} onNext={demo.next} onPrev={demo.prev} onGoToStep={demo.goToStep} departmentColor={PHYSICS_COLOR} />
             </div>
         </div>

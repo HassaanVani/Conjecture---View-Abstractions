@@ -224,7 +224,7 @@ export default function ElectricFields() {
                     </div>
                     <APTag course="Physics 2" unit="Unit 3" color={PHYSICS_COLOR} />
                 </div>
-                <Button onClick={demo.open} variant="secondary">Demo Mode</Button>
+                <Button onClick={demo.open} variant="secondary">AP Tutorial</Button>
             </div>
 
             <div className="flex-1 relative flex">
@@ -251,7 +251,7 @@ export default function ElectricFields() {
                     </div>
                 </div>
 
-                <div className="w-72 bg-[#0d0a1a]/90 border-l border-white/10 p-5 flex flex-col gap-4 overflow-y-auto no-scrollbar z-20">
+                <div className="w-80 bg-[#0d0a1a]/90 border-l border-white/10 p-6 flex flex-col gap-5 overflow-y-auto no-scrollbar z-20">
                     <ControlPanel>
                         <div className="flex gap-2">
                             <Button onClick={() => addCharge(1)}>+ Charge</Button>
@@ -272,10 +272,15 @@ export default function ElectricFields() {
                         <Toggle value={showEquipotential} onChange={setShowEquipotential} label="Equipotential Lines" />
                         <Toggle value={showGauss} onChange={setShowGauss} label="Gaussian Surface" />
                     </ControlPanel>
+
+                    <div className="flex gap-2">
+                        <Button onClick={demo.open} className="flex-1">AP Tutorial</Button>
+                        <Button onClick={() => { setCharges([]); setShowEquipotential(false); setShowGauss(false); setFieldDensity(30) }} variant="secondary">Reset</Button>
+                    </div>
                 </div>
             </div>
 
-            <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-30">
+            <div className="absolute bottom-4 left-4 z-30">
                 <DemoMode steps={demoSteps} currentStep={demo.currentStep} isOpen={demo.isOpen} onClose={demo.close} onNext={demo.next} onPrev={demo.prev} onGoToStep={demo.goToStep} departmentColor={PHYSICS_COLOR} />
             </div>
         </div>

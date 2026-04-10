@@ -270,7 +270,7 @@ export default function WaveInterference() {
                     )}
                 </div>
 
-                <div className="w-72 bg-[#0d0a1a]/90 border-l border-white/10 p-5 flex flex-col gap-4 overflow-y-auto z-20">
+                <div className="w-80 bg-[#0d0a1a]/90 border-l border-white/10 p-6 flex flex-col gap-5 overflow-y-auto no-scrollbar z-20">
                     <ButtonGroup label="Mode" value={mode}
                         onChange={v => setMode(v as 'two-source' | 'double-slit' | 'standing')}
                         options={[
