@@ -19,14 +19,20 @@ const topics: TopicGroup[] = [
     {
         name: 'Mechanics',
         visualizations: [
+            { id: 'motion-graphs', title: 'Motion Graphs', description: 'Real-time x-t, v-t, a-t graphs for 1D kinematics', to: '/physics/kinematics/motion-graphs' },
             { id: 'projectile', title: 'Projectile Motion', description: '2D kinematics with gravity and launch angles', to: '/physics/kinematics/projectile' },
+            { id: 'newtons-laws', title: "Newton's Laws", description: 'F=ma sandbox with friction, inclines, and 3rd law pairs', to: '/physics/dynamics/newtons-laws' },
             { id: 'incline', title: 'Incline Plane', description: 'Forces, friction, and free body diagrams', to: '/physics/dynamics/incline' },
             { id: 'orbit', title: 'Orbital Motion', description: "Kepler's laws and gravitational forces", to: '/physics/circular/orbit' },
+            { id: 'work-energy', title: 'Work & Energy', description: 'Work-energy theorem, power, and energy bar charts', to: '/physics/energy/work-energy' },
             { id: 'coaster', title: 'Energy Conservation', description: 'Potential and kinetic energy transformations', to: '/physics/energy/coaster' },
+            { id: 'impulse', title: 'Impulse & Momentum', description: 'Impulse-momentum theorem and F-t graphs', to: '/physics/momentum/impulse' },
             { id: 'collision', title: 'Collisions', description: 'Elastic and inelastic collisions in 1D/2D', to: '/physics/momentum/collision' },
             { id: 'pendulum', title: 'Pendulum', description: 'Period, frequency, and restoring forces', to: '/physics/pendulum' },
             { id: 'spring', title: 'Spring Mass', description: 'Damped harmonic oscillator', to: '/physics/shm/spring' },
             { id: 'balance', title: 'Torque Balance', description: 'Rotational equilibrium and lever arms', to: '/physics/rotation/balance' },
+            { id: 'rotational-dynamics', title: 'Rotational Dynamics', description: 'Torque, moment of inertia, and angular kinematics', to: '/physics/rotation/rotational-dynamics' },
+            { id: 'angular-momentum', title: 'Angular Momentum', description: 'Conservation of L, rolling, and rotational energy', to: '/physics/rotation/angular-momentum' },
             { id: 'drag', title: 'Drag Simulation', description: 'Air resistance, terminal velocity, and Reynolds number', to: '/physics/mechanics/drag' },
             { id: 'oscillator', title: 'Oscillator', description: 'Damped harmonic motion and phase space', to: '/physics/mechanics/oscillator' },
             { id: 'resonance', title: 'Driven Resonance', description: 'Driven oscillation, resonance curves, and Q-factor', to: '/physics/mechanics/resonance' },
@@ -41,14 +47,19 @@ const topics: TopicGroup[] = [
             { id: 'diffraction', title: 'Diffraction', description: 'Single and double slit diffraction patterns', to: '/physics/waves/diffraction' },
             { id: 'doppler', title: 'Doppler Effect', description: 'Frequency shifts from relative motion', to: '/physics/waves/doppler' },
             { id: 'standing', title: 'Standing Waves', description: 'Nodes, antinodes, and harmonics', to: '/physics/waves/standing' },
+            { id: 'properties', title: 'Wave Properties', description: 'Transverse, longitudinal, boundary behavior, and polarization', to: '/physics/waves/properties' },
             { id: 'snell', title: "Snell's Law", description: 'Refraction at boundaries', to: '/physics/optics/snell' },
             { id: 'lenses', title: 'Lenses', description: 'Converging and diverging lens ray tracing', to: '/physics/optics/lenses' },
+            { id: 'mirrors', title: 'Mirrors', description: 'Concave/convex mirror ray diagrams and image formation', to: '/physics/optics/mirrors' },
+            { id: 'thin-film', title: 'Thin Film Interference', description: 'Soap bubbles, oil films, and anti-reflection coatings', to: '/physics/optics/thin-film' },
         ],
     },
     {
         name: 'Electricity & Magnetism',
         visualizations: [
             { id: 'fields', title: 'Electric Fields', description: 'Field mapping and superposition', to: '/physics/electro/fields' },
+            { id: 'coulomb', title: "Coulomb's Law", description: 'Electric force, charging by conduction and induction', to: '/physics/electro/coulomb' },
+            { id: 'potential', title: 'Electric Potential', description: 'Potential landscapes, equipotential lines, and test charges', to: '/physics/electro/potential' },
             { id: 'dc', title: 'DC Circuits', description: 'Series and parallel resistor networks', to: '/physics/circuits/dc' },
             { id: 'rc', title: 'RC Circuit', description: 'Capacitor charging and exponential decay', to: '/physics/circuits/rc' },
             { id: 'particle', title: 'Particle in B-Field', description: 'Lorentz force and cyclotron motion', to: '/physics/magnetism/particle' },
@@ -59,7 +70,11 @@ const topics: TopicGroup[] = [
             { id: 'ampere', title: "Ampere's Law", description: 'Solenoids, toroids, and enclosed current', to: '/physics/em/ampere' },
             { id: 'rlc', title: 'RLC Circuit', description: 'Impedance, resonance, and phasor diagrams', to: '/physics/em/rlc' },
             { id: 'rl-lc', title: 'RL/LC Circuits', description: 'Transient response and LC oscillations', to: '/physics/circuits/rl-lc' },
+            { id: 'kirchhoff', title: "Kirchhoff's Laws", description: 'KVL, KCL, loop analysis, and current splitting', to: '/physics/circuits/kirchhoff' },
             { id: 'em-wave', title: 'EM Wave Propagation', description: 'Electric and magnetic field wave coupling', to: '/physics/em/em-wave' },
+            { id: 'charge-distributions', title: 'Charge Distributions', description: 'E-fields from line, ring, disk, and plane via integration', to: '/physics/em/charge-distributions' },
+            { id: 'conductors', title: 'Conductors & Shielding', description: 'Electrostatic equilibrium, Faraday cage, charge redistribution', to: '/physics/em/conductors' },
+            { id: 'induction', title: 'Motional EMF & Eddy Currents', description: 'Sliding rod, Lenz\'s law, and magnetic braking', to: '/physics/em/induction' },
         ],
     },
     {
@@ -68,6 +83,7 @@ const topics: TopicGroup[] = [
             { id: 'gas', title: 'Ideal Gas Law', description: 'Kinetic molecular theory and particle physics', to: '/physics/thermo/gas' },
             { id: 'pv', title: 'PV Diagrams', description: 'Work, heat, and thermodynamic processes', to: '/physics/thermo/pv' },
             { id: 'cycles', title: 'Thermodynamic Cycles', description: 'Carnot, Otto, and Diesel cycles', to: '/physics/thermo/cycles' },
+            { id: 'heat-transfer', title: 'Heat Transfer', description: 'Thermal equilibrium, conduction, and heating curves', to: '/physics/thermo/heat-transfer' },
         ],
     },
     {
@@ -76,6 +92,9 @@ const topics: TopicGroup[] = [
             { id: 'photoelectric', title: 'Photoelectric Effect', description: 'Photon energy and electron ejection', to: '/physics/modern/photoelectric' },
             { id: 'energy-levels', title: 'Energy Levels', description: 'Atomic spectra and quantum transitions', to: '/physics/modern/energy-levels' },
             { id: 'decay', title: 'Radioactive Decay', description: 'Half-life, decay chains, and activity', to: '/physics/modern/decay' },
+            { id: 'duality', title: 'Wave-Particle Duality', description: 'Double-slit experiment and de Broglie wavelength', to: '/physics/modern/duality' },
+            { id: 'blackbody', title: 'Blackbody Radiation', description: "Planck's law, Wien's displacement, and UV catastrophe", to: '/physics/modern/blackbody' },
+            { id: 'compton', title: 'Compton Scattering', description: 'Photon-electron collisions and wavelength shift', to: '/physics/modern/compton' },
         ],
     },
     {
@@ -83,6 +102,7 @@ const topics: TopicGroup[] = [
         visualizations: [
             { id: 'buoyancy', title: 'Buoyancy', description: "Archimedes' principle and fluid statics", to: '/physics/fluids/buoyancy' },
             { id: 'flow', title: 'Fluid Dynamics', description: 'Bernoulli principle and continuity equation', to: '/physics/fluids/flow' },
+            { id: 'pressure', title: 'Pressure & Pascal\'s Law', description: 'Hydrostatic pressure, depth, and hydraulic press', to: '/physics/fluids/pressure' },
         ],
     },
 ]

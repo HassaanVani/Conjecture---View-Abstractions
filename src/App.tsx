@@ -34,34 +34,51 @@ const Vectors = lazy(() => import('@/pages/math/vectors'))
 const PhysicsHub = lazy(() => import('@/pages/physics/ap-hub'))
 const Pendulum = lazy(() => import('@/pages/physics/pendulum'))
 const WaveInterference = lazy(() => import('@/pages/physics/wave-interference'))
+const MotionGraphs = lazy(() => import('@/pages/physics/kinematics/motion-graphs'))
 const ProjectileMotion = lazy(() => import('@/pages/physics/kinematics/projectile'))
+const NewtonsLaws = lazy(() => import('@/pages/physics/dynamics/newtons-laws'))
 const InclinePlane = lazy(() => import('@/pages/physics/dynamics/incline'))
 const FBD = lazy(() => import('@/pages/physics/dynamics/fbd'))
 const Orbit = lazy(() => import('@/pages/physics/circular/orbit'))
 const GravField = lazy(() => import('@/pages/physics/circular/grav-field'))
+const WorkEnergy = lazy(() => import('@/pages/physics/energy/work-energy'))
 const EnergyCoaster = lazy(() => import('@/pages/physics/energy/coaster'))
+const ImpulseMomentum = lazy(() => import('@/pages/physics/momentum/impulse'))
 const Collision = lazy(() => import('@/pages/physics/momentum/collision'))
 const SpringMass = lazy(() => import('@/pages/physics/shm/spring'))
 const TorqueBalance = lazy(() => import('@/pages/physics/rotation/balance'))
+const RotationalDynamics = lazy(() => import('@/pages/physics/rotation/rotational-dynamics'))
+const AngularMomentum = lazy(() => import('@/pages/physics/rotation/angular-momentum'))
 const Buoyancy = lazy(() => import('@/pages/physics/fluids/buoyancy'))
 const FluidFlow = lazy(() => import('@/pages/physics/fluids/flow'))
+const FluidPressure = lazy(() => import('@/pages/physics/fluids/pressure'))
 const IdealGas = lazy(() => import('@/pages/physics/thermo/gas'))
 const PVDiagram = lazy(() => import('@/pages/physics/thermo/pv'))
 const HeatEngines = lazy(() => import('@/pages/physics/thermo/cycles'))
+const HeatTransfer = lazy(() => import('@/pages/physics/thermo/heat-transfer'))
 const ElectricFields = lazy(() => import('@/pages/physics/electro/fields'))
+const CoulombsLaw = lazy(() => import('@/pages/physics/electro/coulomb'))
+const ElectricPotential = lazy(() => import('@/pages/physics/electro/potential'))
 const RCCircuit = lazy(() => import('@/pages/physics/circuits/rc'))
 const DCCircuit = lazy(() => import('@/pages/physics/circuits/dc'))
 const RLLCCircuit = lazy(() => import('@/pages/physics/circuits/rl-lc'))
+const KirchhoffLaws = lazy(() => import('@/pages/physics/circuits/kirchhoff'))
 const MagneticParticle = lazy(() => import('@/pages/physics/magnetism/particle'))
 const FaradayFlux = lazy(() => import('@/pages/physics/magnetism/flux'))
 const SnellsLaw = lazy(() => import('@/pages/physics/optics/snell'))
 const LensesMirrors = lazy(() => import('@/pages/physics/optics/lenses'))
+const Mirrors = lazy(() => import('@/pages/physics/optics/mirrors'))
+const ThinFilm = lazy(() => import('@/pages/physics/optics/thin-film'))
 const StandingWaves = lazy(() => import('@/pages/physics/waves/standing'))
 const DopplerEffect = lazy(() => import('@/pages/physics/waves/doppler'))
 const Diffraction = lazy(() => import('@/pages/physics/waves/diffraction'))
+const WaveProperties = lazy(() => import('@/pages/physics/waves/properties'))
 const Photoelectric = lazy(() => import('@/pages/physics/modern/photoelectric'))
 const EnergyLevels = lazy(() => import('@/pages/physics/modern/energy-levels'))
 const NuclearDecay = lazy(() => import('@/pages/physics/modern/decay'))
+const WaveParticleDuality = lazy(() => import('@/pages/physics/modern/duality'))
+const BlackbodyRadiation = lazy(() => import('@/pages/physics/modern/blackbody'))
+const ComptonScattering = lazy(() => import('@/pages/physics/modern/compton'))
 const DragSimulation = lazy(() => import('@/pages/physics/mechanics/drag'))
 const Oscillator = lazy(() => import('@/pages/physics/mechanics/oscillator'))
 const Resonance = lazy(() => import('@/pages/physics/mechanics/resonance'))
@@ -72,6 +89,9 @@ const RLC = lazy(() => import('@/pages/physics/em/rlc'))
 const Capacitor = lazy(() => import('@/pages/physics/em/capacitor'))
 const Ampere = lazy(() => import('@/pages/physics/em/ampere'))
 const EMWave = lazy(() => import('@/pages/physics/em/em-wave'))
+const ChargeDistributions = lazy(() => import('@/pages/physics/em/charge-distributions'))
+const Conductors = lazy(() => import('@/pages/physics/em/conductors'))
+const EMInduction = lazy(() => import('@/pages/physics/em/induction'))
 
 // Calculus
 const CalculusHub = lazy(() => import('@/pages/calculus/hub'))
@@ -176,36 +196,53 @@ export default function App() {
                             {/* AP Physics 1 */}
                             <Route path="/physics/pendulum" element={<Pendulum />} />
                             <Route path="/physics/waves" element={<WaveInterference />} />
+                            <Route path="/physics/kinematics/motion-graphs" element={<MotionGraphs />} />
                             <Route path="/physics/kinematics/projectile" element={<ProjectileMotion />} />
+                            <Route path="/physics/dynamics/newtons-laws" element={<NewtonsLaws />} />
                             <Route path="/physics/dynamics/incline" element={<InclinePlane />} />
                             <Route path="/physics/dynamics/fbd" element={<FBD />} />
                             <Route path="/physics/circular/orbit" element={<Orbit />} />
                             <Route path="/physics/circular/grav-field" element={<GravField />} />
+                            <Route path="/physics/energy/work-energy" element={<WorkEnergy />} />
                             <Route path="/physics/energy/coaster" element={<EnergyCoaster />} />
+                            <Route path="/physics/momentum/impulse" element={<ImpulseMomentum />} />
                             <Route path="/physics/momentum/collision" element={<Collision />} />
                             <Route path="/physics/shm/spring" element={<SpringMass />} />
                             <Route path="/physics/rotation/balance" element={<TorqueBalance />} />
+                            <Route path="/physics/rotation/rotational-dynamics" element={<RotationalDynamics />} />
+                            <Route path="/physics/rotation/angular-momentum" element={<AngularMomentum />} />
 
                             {/* AP Physics 2 */}
                             <Route path="/physics/fluids/buoyancy" element={<Buoyancy />} />
                             <Route path="/physics/fluids/flow" element={<FluidFlow />} />
+                            <Route path="/physics/fluids/pressure" element={<FluidPressure />} />
                             <Route path="/physics/thermo/gas" element={<IdealGas />} />
                             <Route path="/physics/thermo/pv" element={<PVDiagram />} />
                             <Route path="/physics/thermo/cycles" element={<HeatEngines />} />
+                            <Route path="/physics/thermo/heat-transfer" element={<HeatTransfer />} />
                             <Route path="/physics/electro/fields" element={<ElectricFields />} />
+                            <Route path="/physics/electro/coulomb" element={<CoulombsLaw />} />
+                            <Route path="/physics/electro/potential" element={<ElectricPotential />} />
                             <Route path="/physics/circuits/rc" element={<RCCircuit />} />
                             <Route path="/physics/circuits/dc" element={<DCCircuit />} />
                             <Route path="/physics/circuits/rl-lc" element={<RLLCCircuit />} />
+                            <Route path="/physics/circuits/kirchhoff" element={<KirchhoffLaws />} />
                             <Route path="/physics/magnetism/particle" element={<MagneticParticle />} />
                             <Route path="/physics/magnetism/flux" element={<FaradayFlux />} />
                             <Route path="/physics/optics/snell" element={<SnellsLaw />} />
                             <Route path="/physics/optics/lenses" element={<LensesMirrors />} />
+                            <Route path="/physics/optics/mirrors" element={<Mirrors />} />
+                            <Route path="/physics/optics/thin-film" element={<ThinFilm />} />
                             <Route path="/physics/waves/standing" element={<StandingWaves />} />
                             <Route path="/physics/waves/doppler" element={<DopplerEffect />} />
                             <Route path="/physics/waves/diffraction" element={<Diffraction />} />
+                            <Route path="/physics/waves/properties" element={<WaveProperties />} />
                             <Route path="/physics/modern/photoelectric" element={<Photoelectric />} />
                             <Route path="/physics/modern/energy-levels" element={<EnergyLevels />} />
                             <Route path="/physics/modern/decay" element={<NuclearDecay />} />
+                            <Route path="/physics/modern/duality" element={<WaveParticleDuality />} />
+                            <Route path="/physics/modern/blackbody" element={<BlackbodyRadiation />} />
+                            <Route path="/physics/modern/compton" element={<ComptonScattering />} />
 
                             {/* Physics C: Mechanics */}
                             <Route path="/physics/mechanics/drag" element={<DragSimulation />} />
@@ -220,6 +257,9 @@ export default function App() {
                             <Route path="/physics/em/capacitor" element={<Capacitor />} />
                             <Route path="/physics/em/ampere" element={<Ampere />} />
                             <Route path="/physics/em/em-wave" element={<EMWave />} />
+                            <Route path="/physics/em/charge-distributions" element={<ChargeDistributions />} />
+                            <Route path="/physics/em/conductors" element={<Conductors />} />
+                            <Route path="/physics/em/induction" element={<EMInduction />} />
 
                             {/* Calculus */}
                             <Route path="/calculus" element={<CalculusHub />} />
