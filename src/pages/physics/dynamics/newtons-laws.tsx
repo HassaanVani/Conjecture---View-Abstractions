@@ -18,6 +18,15 @@ export default function NewtonsLaws() {
     const velRef = useRef(0)
     const posRef = useRef(0)
 
+    // Drag state for force arrow
+    const [isDraggingForce, setIsDraggingForce] = useState(false)
+    const [isHoveringForce, setIsHoveringForce] = useState(false)
+    const draggingForceRef = useRef(false)
+    // Store the arrow tip position for hit testing (updated each frame)
+    const forceArrowTipRef = useRef<{ x: number; y: number; baseX: number; baseY: number }>({ x: 0, y: 0, baseX: 0, baseY: 0 })
+    // Store the canvas transform context for mouse->local conversion
+    const surfTransformRef = useRef<{ cx: number; cy: number; theta: number }>({ cx: 0, cy: 0, theta: 0 })
+
     const g = 9.8
 
     const calcForces = useCallback(() => {
@@ -64,6 +73,63 @@ export default function NewtonsLaws() {
     ]
 
     const demo = useDemoMode(demoSteps)
+
+    // --- Mouse interaction for force arrow ---
+    const getCanvasCoords = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
+        const canvas = canvasRef.current
+        if (!canvas) return { x: 0, y: 0 }
+        const rect = canvas.getBoundingClientRect()
+        return { x: e.clientX - rect.left, y: e.clientY - rect.top }
+    }, [])
+
+    const isNearForceArrowTip = useCallback((mx: number, my: number): boolean => {
+        const tip = forceArrowTipRef.current
+        const d = Math.sqrt((mx - tip.x) ** 2 + (my - tip.y) ** 2)
+        return d < 18
+    }, [])
+
+    const handleMouseDown = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
+        const { x, y } = getCanvasCoords(e)
+        if (isNearForceArrowTip(x, y)) {
+            setIsDraggingForce(true)
+            draggingForceRef.current = true
+        }
+    }, [getCanvasCoords, isNearForceArrowTip])
+
+    const handleMouseMove = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
+        const { x, y } = getCanvasCoords(e)
+
+        if (draggingForceRef.current) {
+            // Convert screen coords to rotated surface-local coords
+            const { cx, cy, theta } = surfTransformRef.current
+            const dx = x - cx
+            const dy = y - cy
+            // Rotate back into surface-local frame
+            const localX = dx * Math.cos(theta) - dy * Math.sin(theta)
+            // localX is the horizontal distance from block center in surface frame
+            // Map to force: pixels -> Newtons (arrowScale is 1.5 in draw)
+            const arrowScale = 1.5
+            const blockPos = posRef.current
+            const forcePixels = localX - blockPos
+            const newForce = Math.max(-50, Math.min(80, forcePixels / arrowScale))
+            setAppliedForce(Math.round(newForce))
+        } else {
+            setIsHoveringForce(isNearForceArrowTip(x, y))
+        }
+    }, [getCanvasCoords, isNearForceArrowTip])
+
+    const handleMouseUp = useCallback(() => {
+        setIsDraggingForce(false)
+        draggingForceRef.current = false
+    }, [])
+
+    const handleMouseLeave = useCallback(() => {
+        setIsDraggingForce(false)
+        draggingForceRef.current = false
+        setIsHoveringForce(false)
+    }, [])
+
+    const canvasCursor = isDraggingForce ? 'cursor-grabbing' : isHoveringForce ? 'cursor-grab' : ''
 
     useEffect(() => {
         const canvas = canvasRef.current
@@ -181,9 +247,48 @@ export default function NewtonsLaws() {
             const cx = posRef.current
             const cy = blockY + blockH / 2
 
+            // Store transform for mouse interaction
+            surfTransformRef.current = { cx: surfCenterX, cy: surfCenterY, theta: -theta }
+
             // Applied force (along surface)
+            const forceArrowBaseX = cx + (appliedForce >= 0 ? blockW / 2 + 5 : -blockW / 2 - 5)
+            const forceArrowTipLocalX = forceArrowBaseX + appliedForce * arrowScale
+            const forceArrowTipLocalY = cy
+
             if (Math.abs(appliedForce) > 0.1) {
                 drawArrow(cx - blockW / 2 - 5, cy, -appliedForce * arrowScale * -1, 0, 'rgba(255, 100, 100, 0.9)', `F_app = ${appliedForce.toFixed(0)}N`)
+            }
+
+            // Draw drag handle at force arrow tip (always visible, even at zero force)
+            {
+                const handleLocalX = Math.abs(appliedForce) > 0.1 ? forceArrowTipLocalX : cx + blockW / 2 + 20
+                const handleLocalY = forceArrowTipLocalY
+                const handleR = draggingForceRef.current ? 7 : 5
+                ctx.beginPath()
+                ctx.arc(handleLocalX, handleLocalY, handleR, 0, Math.PI * 2)
+                ctx.fillStyle = draggingForceRef.current ? 'rgba(255, 100, 100, 0.9)' : isHoveringForce ? 'rgba(255, 100, 100, 0.7)' : 'rgba(255, 100, 100, 0.35)'
+                ctx.fill()
+                ctx.strokeStyle = 'rgba(255, 100, 100, 0.6)'
+                ctx.lineWidth = 1
+                ctx.stroke()
+
+                // Convert local handle position to screen coords for hit testing
+                const cosT = Math.cos(-theta)
+                const sinT = Math.sin(-theta)
+                forceArrowTipRef.current = {
+                    x: surfCenterX + handleLocalX * cosT - handleLocalY * sinT,
+                    y: surfCenterY + handleLocalX * sinT + handleLocalY * cosT,
+                    baseX: surfCenterX,
+                    baseY: surfCenterY,
+                }
+            }
+
+            // Hint text near handle when not dragging
+            if (!draggingForceRef.current && Math.abs(appliedForce) < 0.5) {
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.2)'
+                ctx.font = '9px system-ui'
+                ctx.textAlign = 'left'
+                ctx.fillText('drag to apply force', cx + blockW / 2 + 28, cy + 4)
             }
 
             // Friction (along surface, opposing motion)
@@ -256,7 +361,7 @@ export default function NewtonsLaws() {
 
         animId = requestAnimationFrame(draw)
         return () => { window.removeEventListener('resize', resize); cancelAnimationFrame(animId) }
-    }, [appliedForce, mass, mu, surfaceAngle, showLabels, showNetForce, show3rdLaw, paused, calcForces])
+    }, [appliedForce, mass, mu, surfaceAngle, showLabels, showNetForce, show3rdLaw, paused, calcForces, isDraggingForce, isHoveringForce])
 
     const forces = calcForces()
 
@@ -264,7 +369,14 @@ export default function NewtonsLaws() {
         <div className="min-h-screen flex flex-col bg-[#0d0a1a] text-white overflow-hidden font-sans">
             <div className="flex-1 relative flex">
                 <div className="flex-1 relative">
-                    <canvas ref={canvasRef} className="w-full h-full block" />
+                    <canvas
+                        ref={canvasRef}
+                        className={`w-full h-full block ${canvasCursor}`}
+                        onMouseDown={handleMouseDown}
+                        onMouseMove={handleMouseMove}
+                        onMouseUp={handleMouseUp}
+                        onMouseLeave={handleMouseLeave}
+                    />
 
                     <div className="absolute top-4 left-4 flex flex-col gap-3">
                         <APTag course="Physics 1" unit="Unit 2" color="rgb(160, 100, 255)" />

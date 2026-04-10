@@ -20,6 +20,19 @@ export default function Induction() {
     const timeRef = useRef(0)
     const rodPosRef = useRef(0.3)
 
+    // --- Drag state for mouse interaction ---
+    const [canvasCursor, setCanvasCursor] = useState('default')
+    const draggingRef = useRef<'rod' | 'disk' | null>(null)
+    const lastMouseXRef = useRef(0)
+    const lastMouseTimeRef = useRef(0)
+    const dragVelocitiesRef = useRef<number[]>([])
+    // Store layout geometry so mouse handlers can use it
+    const layoutRef = useRef({
+        railTop: 0, railBot: 0, railLeft: 0, railRight: 0, railLen: 0,
+        rodX: 0,
+        diskCx: 0, diskCy: 0, diskR: 0,
+    })
+
     const calcPhysics = useCallback(() => {
         const emf = bField * rodLength * rodVelocity
         const current = emf / resistance
@@ -41,6 +54,128 @@ export default function Induction() {
         setPaused(false)
         timeRef.current = 0
         rodPosRef.current = 0.3
+    }, [])
+
+    // --- Mouse event handlers for canvas dragging ---
+    const getCanvasPos = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
+        const canvas = canvasRef.current
+        if (!canvas) return { x: 0, y: 0 }
+        const rect = canvas.getBoundingClientRect()
+        return { x: e.clientX - rect.left, y: e.clientY - rect.top }
+    }, [])
+
+    const handleMouseDown = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
+        const pos = getCanvasPos(e)
+        const layout = layoutRef.current
+        const mode = simMode as SimMode
+
+        if (mode === 'rod') {
+            // Hit-test rod: within 20px of rodX and within rail bounds
+            if (Math.abs(pos.x - layout.rodX) < 20 &&
+                pos.y > layout.railTop - 15 && pos.y < layout.railBot + 15) {
+                draggingRef.current = 'rod'
+                lastMouseXRef.current = pos.x
+                lastMouseTimeRef.current = performance.now()
+                dragVelocitiesRef.current = []
+                setPaused(true)
+                setCanvasCursor('grabbing')
+            }
+        } else if (mode === 'eddy') {
+            // Hit-test disk: within disk radius from center
+            const dx = pos.x - layout.diskCx
+            const dy = pos.y - layout.diskCy
+            if (Math.sqrt(dx * dx + dy * dy) < layout.diskR + 15) {
+                draggingRef.current = 'disk'
+                lastMouseXRef.current = pos.x
+                lastMouseTimeRef.current = performance.now()
+                dragVelocitiesRef.current = []
+                setCanvasCursor('grabbing')
+            }
+        }
+    }, [simMode, getCanvasPos])
+
+    const handleMouseMove = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
+        const pos = getCanvasPos(e)
+        const layout = layoutRef.current
+        const mode = simMode as SimMode
+
+        if (draggingRef.current === 'rod') {
+            // Compute new rod position
+            const newPosNorm = (pos.x - layout.railLeft) / layout.railLen
+            const clamped = Math.max(0.05, Math.min(0.95, newPosNorm))
+            rodPosRef.current = clamped
+
+            // Compute velocity from drag speed
+            const now = performance.now()
+            const dt = (now - lastMouseTimeRef.current) / 1000
+            if (dt > 0.001) {
+                const dxPixels = pos.x - lastMouseXRef.current
+                const dxMeters = dxPixels / layout.railLen // rough pixel-to-norm mapping
+                const v = dxMeters / dt * 3 // scale factor for feel
+                dragVelocitiesRef.current.push(v)
+                if (dragVelocitiesRef.current.length > 5) dragVelocitiesRef.current.shift()
+                // Average recent velocities for smoothness
+                const avg = dragVelocitiesRef.current.reduce((a, b) => a + b, 0) / dragVelocitiesRef.current.length
+                const clampedV = Math.max(0.5, Math.min(10, Math.abs(avg)))
+                setRodVelocity(Math.round(clampedV * 2) / 2) // snap to 0.5 steps
+            }
+            lastMouseXRef.current = pos.x
+            lastMouseTimeRef.current = now
+            return
+        }
+
+        if (draggingRef.current === 'disk') {
+            // Use horizontal drag speed to set disk speed
+            const now = performance.now()
+            const dt = (now - lastMouseTimeRef.current) / 1000
+            if (dt > 0.001) {
+                const dx = pos.x - lastMouseXRef.current
+                const speed = Math.abs(dx / dt) * 0.02
+                const clampedV = Math.max(0.5, Math.min(10, speed))
+                setRodVelocity(Math.round(clampedV * 2) / 2)
+            }
+            lastMouseXRef.current = pos.x
+            lastMouseTimeRef.current = now
+            return
+        }
+
+        // Hover cursor logic
+        if (mode === 'rod') {
+            if (Math.abs(pos.x - layout.rodX) < 20 &&
+                pos.y > layout.railTop - 15 && pos.y < layout.railBot + 15) {
+                setCanvasCursor('grab')
+            } else {
+                setCanvasCursor('default')
+            }
+        } else if (mode === 'eddy') {
+            const dx = pos.x - layout.diskCx
+            const dy = pos.y - layout.diskCy
+            if (Math.sqrt(dx * dx + dy * dy) < layout.diskR + 15) {
+                setCanvasCursor('grab')
+            } else {
+                setCanvasCursor('default')
+            }
+        }
+    }, [simMode, getCanvasPos])
+
+    const handleMouseUp = useCallback(() => {
+        if (draggingRef.current === 'rod') {
+            // Keep the current velocity from dragging; unpause to let it continue
+            setPaused(false)
+        }
+        if (draggingRef.current === 'disk') {
+            // Disk keeps spinning at the set velocity
+        }
+        draggingRef.current = null
+        setCanvasCursor('default')
+    }, [])
+
+    const handleMouseLeave = useCallback(() => {
+        if (draggingRef.current) {
+            draggingRef.current = null
+            setPaused(false)
+            setCanvasCursor('default')
+        }
     }, [])
 
     const demoSteps = [
@@ -88,6 +223,13 @@ export default function Induction() {
                 const railLeft = w * 0.12
                 const railRight = w * 0.82
                 const railLen = railRight - railLeft
+
+                // Store layout for mouse handlers
+                layoutRef.current.railTop = railTop
+                layoutRef.current.railBot = railBot
+                layoutRef.current.railLeft = railLeft
+                layoutRef.current.railRight = railRight
+                layoutRef.current.railLen = railLen
 
                 // B-field crosses (into page)
                 ctx.fillStyle = 'rgba(160, 100, 255, 0.2)'
@@ -137,6 +279,7 @@ export default function Induction() {
                     if (rodPosRef.current > 0.85) rodPosRef.current = 0.15
                 }
                 const rodX = railLeft + rodPosRef.current * railLen
+                layoutRef.current.rodX = rodX
 
                 // Rod glow
                 const rodGlow = ctx.createLinearGradient(rodX - 8, 0, rodX + 8, 0)
@@ -153,6 +296,38 @@ export default function Induction() {
                 ctx.moveTo(rodX, railTop)
                 ctx.lineTo(rodX, railBot)
                 ctx.stroke()
+
+                // Grab handles on rod (dots at top and bottom)
+                const handleR = draggingRef.current === 'rod' ? 7 : 5
+                const handleAlpha = draggingRef.current === 'rod' ? 1.0 : 0.6
+                ctx.fillStyle = `rgba(100, 200, 255, ${handleAlpha})`
+                ctx.beginPath()
+                ctx.arc(rodX, railTop, handleR, 0, Math.PI * 2)
+                ctx.fill()
+                ctx.beginPath()
+                ctx.arc(rodX, railBot, handleR, 0, Math.PI * 2)
+                ctx.fill()
+                // Center handle
+                ctx.beginPath()
+                ctx.arc(rodX, (railTop + railBot) / 2, handleR - 1, 0, Math.PI * 2)
+                ctx.fill()
+                // Subtle grab affordance ring
+                if (draggingRef.current !== 'rod') {
+                    ctx.strokeStyle = 'rgba(100, 200, 255, 0.2)'
+                    ctx.lineWidth = 1
+                    ctx.setLineDash([3, 3])
+                    ctx.beginPath()
+                    ctx.arc(rodX, (railTop + railBot) / 2, 18, 0, Math.PI * 2)
+                    ctx.stroke()
+                    ctx.setLineDash([])
+                } else {
+                    // Active drag glow
+                    ctx.strokeStyle = 'rgba(100, 200, 255, 0.4)'
+                    ctx.lineWidth = 2
+                    ctx.beginPath()
+                    ctx.arc(rodX, (railTop + railBot) / 2, 22, 0, Math.PI * 2)
+                    ctx.stroke()
+                }
 
                 // Rod velocity arrow
                 const vArrowLen = Math.min(60, rodVelocity * 12)
@@ -290,6 +465,11 @@ export default function Induction() {
                 const diskCy = h * 0.5
                 const diskR = Math.min(w, h) * 0.25
 
+                // Store layout for mouse handlers
+                layoutRef.current.diskCx = diskCx
+                layoutRef.current.diskCy = diskCy
+                layoutRef.current.diskR = diskR
+
                 // Magnetic field region (right half)
                 const bRegionLeft = w * 0.45
                 const bRegionRight = w * 0.85
@@ -334,6 +514,32 @@ export default function Induction() {
                 ctx.beginPath()
                 ctx.arc(diskCx, diskCy, 6, 0, Math.PI * 2)
                 ctx.fill()
+
+                // Drag affordance for disk
+                if (draggingRef.current === 'disk') {
+                    ctx.strokeStyle = 'rgba(255, 220, 100, 0.5)'
+                    ctx.lineWidth = 2
+                    ctx.beginPath()
+                    ctx.arc(diskCx, diskCy, diskR + 5, 0, Math.PI * 2)
+                    ctx.stroke()
+                    // "Drag to spin" label
+                    ctx.fillStyle = 'rgba(255, 220, 100, 0.7)'
+                    ctx.font = '10px system-ui'
+                    ctx.textAlign = 'center'
+                    ctx.fillText('dragging...', diskCx, diskCy + diskR + 35)
+                } else {
+                    ctx.strokeStyle = 'rgba(200, 200, 200, 0.15)'
+                    ctx.lineWidth = 1
+                    ctx.setLineDash([4, 4])
+                    ctx.beginPath()
+                    ctx.arc(diskCx, diskCy, diskR + 5, 0, Math.PI * 2)
+                    ctx.stroke()
+                    ctx.setLineDash([])
+                    ctx.fillStyle = 'rgba(200, 200, 200, 0.25)'
+                    ctx.font = '10px system-ui'
+                    ctx.textAlign = 'center'
+                    ctx.fillText('drag to spin', diskCx, diskCy + diskR + 35)
+                }
 
                 // Rotation spokes
                 ctx.strokeStyle = 'rgba(200, 200, 200, 0.15)'
@@ -456,7 +662,15 @@ export default function Induction() {
         <div className="min-h-screen flex flex-col bg-[#0d0a1a] text-white overflow-hidden font-sans">
             <div className="flex-1 relative flex">
                 <div className="flex-1 relative">
-                    <canvas ref={canvasRef} className="w-full h-full block" />
+                    <canvas
+                        ref={canvasRef}
+                        className="w-full h-full block"
+                        style={{ cursor: canvasCursor }}
+                        onMouseDown={handleMouseDown}
+                        onMouseMove={handleMouseMove}
+                        onMouseUp={handleMouseUp}
+                        onMouseLeave={handleMouseLeave}
+                    />
 
                     <div className="absolute top-4 left-4 flex flex-col gap-3">
                         <APTag course="Physics C: E&M" unit="Unit 4" color="rgb(160, 100, 255)" />

@@ -5,6 +5,7 @@ import { DemoMode, useDemoMode } from '@/components/demo-mode'
 import { ControlPanel, ControlGroup, Slider, Button, Toggle, ButtonGroup } from '@/components/control-panel'
 
 type ForceShape = 'square' | 'triangle' | 'halfsine'
+type ImpulseDragTarget = 'ball' | 'velArrow' | null
 
 export default function Impulse() {
     const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -21,6 +22,14 @@ export default function Impulse() {
     const ballVelRef = useRef(0)
     const impulseTimeRef = useRef(0)
     const impulseAccumRef = useRef(0)
+
+    // Drag state
+    const [dragTarget, setDragTarget] = useState<ImpulseDragTarget>(null)
+    const [hoverTarget, setHoverTarget] = useState<ImpulseDragTarget>(null)
+    const dragRef = useRef<ImpulseDragTarget>(null)
+    // Store ball and velocity arrow tip screen positions for hit-testing
+    const ballScreenRef = useRef<{ x: number; y: number; r: number }>({ x: 0, y: 0, r: 20 })
+    const velTipScreenRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 })
 
     const calcImpulse = useCallback(() => {
         const shape = forceShape as ForceShape
@@ -78,6 +87,72 @@ export default function Impulse() {
         impulseTimeRef.current = 0
         impulseAccumRef.current = 0
     }, [])
+
+    // --- Mouse interaction ---
+    const getCanvasCoords = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
+        const canvas = canvasRef.current
+        if (!canvas) return { x: 0, y: 0 }
+        const rect = canvas.getBoundingClientRect()
+        return { x: e.clientX - rect.left, y: e.clientY - rect.top }
+    }, [])
+
+    const hitTest = useCallback((mx: number, my: number): ImpulseDragTarget => {
+        // Check velocity arrow tip first
+        const vt = velTipScreenRef.current
+        if (Math.sqrt((mx - vt.x) ** 2 + (my - vt.y) ** 2) < 14) return 'velArrow'
+        // Check ball body
+        const bs = ballScreenRef.current
+        if (Math.sqrt((mx - bs.x) ** 2 + (my - bs.y) ** 2) < bs.r + 4) return 'ball'
+        return null
+    }, [])
+
+    const handleMouseDown = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
+        // Only allow dragging during approach phase
+        if (phaseRef.current !== 'approach') return
+        const { x, y } = getCanvasCoords(e)
+        const target = hitTest(x, y)
+        if (target) {
+            setDragTarget(target)
+            dragRef.current = target
+        }
+    }, [getCanvasCoords, hitTest])
+
+    const handleMouseMove = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
+        const { x, y } = getCanvasCoords(e)
+
+        if (dragRef.current && phaseRef.current === 'approach') {
+            const bs = ballScreenRef.current
+            if (dragRef.current === 'ball') {
+                // Map screen x back to ballPos: ballScreenX = 40 + ballPos * 0.8
+                const newPos = Math.max(0, Math.min(190, (x - 40) / 0.8))
+                ballPosRef.current = newPos
+            } else if (dragRef.current === 'velArrow') {
+                // Arrow goes from ballScreenX to tip. Length maps to velocity.
+                // velArrowLen = min(70, |p| * 2) but for dragging, use direct mapping:
+                // tip offset from ball center = velocity * scale
+                const velScale = 8
+                const newVel = Math.max(0, Math.min(15, (x - bs.x) / velScale))
+                setInitialVel(Math.round(newVel * 2) / 2) // snap to 0.5
+                ballVelRef.current = newVel
+            }
+        } else {
+            const target = phaseRef.current === 'approach' ? hitTest(x, y) : null
+            setHoverTarget(target)
+        }
+    }, [getCanvasCoords, hitTest, setInitialVel])
+
+    const handleMouseUp = useCallback(() => {
+        setDragTarget(null)
+        dragRef.current = null
+    }, [])
+
+    const handleMouseLeave = useCallback(() => {
+        setDragTarget(null)
+        dragRef.current = null
+        setHoverTarget(null)
+    }, [])
+
+    const canvasCursor = dragTarget ? 'cursor-grabbing' : hoverTarget ? 'cursor-grab' : ''
 
     const demoSteps = [
         { title: 'Momentum = mass x velocity', description: 'Momentum (p = mv) measures how hard it is to stop a moving object. The ball moves with initial velocity, carrying momentum shown as an arrow. More mass or more velocity means more momentum.', setup: () => { reset(); setInitialVel(6); setMass(2); setForceMag(0) } },
@@ -176,12 +251,30 @@ export default function Impulse() {
             ctx.textAlign = 'center'
             ctx.fillText('Impact Zone', impactX, ballY - 55)
 
+            // Store ball screen position for hit testing
+            ballScreenRef.current = { x: ballScreenX, y: ballY, r: ballR }
+
             // Ball glow
             const glow = ctx.createRadialGradient(ballScreenX, ballY, 0, ballScreenX, ballY, ballR + 12)
             glow.addColorStop(0, 'rgba(160, 100, 255, 0.4)')
             glow.addColorStop(1, 'transparent')
             ctx.fillStyle = glow
             ctx.beginPath(); ctx.arc(ballScreenX, ballY, ballR + 12, 0, Math.PI * 2); ctx.fill()
+
+            // Drag affordance ring on ball during approach phase
+            if (phase === 'approach') {
+                const isBallDragged = dragRef.current === 'ball'
+                const isBallHovered = !dragRef.current && hoverTarget === 'ball'
+                if (isBallDragged || isBallHovered) {
+                    ctx.strokeStyle = isBallDragged ? 'rgba(255,255,255,0.4)' : 'rgba(255,255,255,0.2)'
+                    ctx.lineWidth = 2
+                    ctx.setLineDash([4, 4])
+                    ctx.beginPath()
+                    ctx.arc(ballScreenX, ballY, ballR + 6, 0, Math.PI * 2)
+                    ctx.stroke()
+                    ctx.setLineDash([])
+                }
+            }
 
             // Ball
             const ballColor = phase === 'impulse' ? 'rgba(255, 140, 100, 0.9)' : 'rgba(160, 100, 255, 0.9)'
@@ -193,6 +286,55 @@ export default function Impulse() {
             ctx.font = 'bold 11px system-ui'
             ctx.textAlign = 'center'
             ctx.fillText(`${mass}kg`, ballScreenX, ballY + 4)
+
+            // Velocity arrow with drag handle (during approach phase)
+            if (phase === 'approach') {
+                const velScale = 8
+                const velArrowLen = initialVel * velScale
+                const velTipX = ballScreenX + velArrowLen
+                const velTipY = ballY
+
+                // Store for hit testing
+                velTipScreenRef.current = { x: velTipX, y: velTipY }
+
+                if (velArrowLen > 2) {
+                    // Arrow line
+                    ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)'
+                    ctx.lineWidth = 2
+                    ctx.beginPath()
+                    ctx.moveTo(ballScreenX, ballY)
+                    ctx.lineTo(velTipX, velTipY)
+                    ctx.stroke()
+
+                    // Arrowhead
+                    ctx.fillStyle = 'rgba(255, 255, 255, 0.5)'
+                    ctx.beginPath()
+                    ctx.moveTo(velTipX, velTipY)
+                    ctx.lineTo(velTipX - 7, velTipY - 4)
+                    ctx.lineTo(velTipX - 7, velTipY + 4)
+                    ctx.closePath()
+                    ctx.fill()
+                }
+
+                // Drag handle circle at velocity arrow tip
+                const isVelDragged = dragRef.current === 'velArrow'
+                const isVelHovered = !dragRef.current && hoverTarget === 'velArrow'
+                ctx.beginPath()
+                ctx.arc(velTipX, velTipY, isVelDragged ? 7 : 5, 0, Math.PI * 2)
+                ctx.fillStyle = isVelDragged ? 'rgba(255,255,255,0.8)' : isVelHovered ? 'rgba(255,255,255,0.6)' : 'rgba(255,255,255,0.25)'
+                ctx.fill()
+                ctx.strokeStyle = 'rgba(255,255,255,0.4)'
+                ctx.lineWidth = 1
+                ctx.stroke()
+
+                // Show velocity value near arrow while dragging
+                if (isVelDragged) {
+                    ctx.fillStyle = 'rgba(255,255,255,0.7)'
+                    ctx.font = 'bold 11px system-ui'
+                    ctx.textAlign = 'center'
+                    ctx.fillText(`v = ${initialVel.toFixed(1)} m/s`, velTipX, velTipY - 14)
+                }
+            }
 
             // Force arrow during impulse
             if (phase === 'impulse') {
@@ -270,6 +412,14 @@ export default function Impulse() {
             ctx.font = 'bold 12px system-ui'
             ctx.textAlign = 'center'
             ctx.fillText(phaseLabels[phase], leftW / 2, h * 0.15)
+
+            // Hint text during approach phase when not dragging
+            if (phase === 'approach' && !dragRef.current) {
+                ctx.fillStyle = 'rgba(255,255,255,0.2)'
+                ctx.font = '10px system-ui'
+                ctx.textAlign = 'center'
+                ctx.fillText('drag ball to reposition \u2022 drag arrow tip to set velocity', leftW / 2, ballY + ballR + 40)
+            }
 
             // --- RIGHT: F vs t graph ---
             const graphLeft = w * 0.52
@@ -483,7 +633,7 @@ export default function Impulse() {
 
         animId = requestAnimationFrame(draw)
         return () => { window.removeEventListener('resize', resize); cancelAnimationFrame(animId) }
-    }, [initialVel, mass, forceMag, forceDuration, forceShape, showMomentumVectors, paused, calcImpulse, getForceAtTime, resetSim])
+    }, [initialVel, mass, forceMag, forceDuration, forceShape, showMomentumVectors, paused, calcImpulse, getForceAtTime, resetSim, dragTarget, hoverTarget])
 
     const impData = calcImpulse()
 
@@ -491,7 +641,14 @@ export default function Impulse() {
         <div className="min-h-screen flex flex-col bg-[#0d0a1a] text-white overflow-hidden font-sans">
             <div className="flex-1 relative flex">
                 <div className="flex-1 relative">
-                    <canvas ref={canvasRef} className="w-full h-full block" />
+                    <canvas
+                        ref={canvasRef}
+                        className={`w-full h-full block ${canvasCursor}`}
+                        onMouseDown={handleMouseDown}
+                        onMouseMove={handleMouseMove}
+                        onMouseUp={handleMouseUp}
+                        onMouseLeave={handleMouseLeave}
+                    />
 
                     <div className="absolute top-4 left-4 flex flex-col gap-3">
                         <APTag course="Physics 1" unit="Unit 4" color="rgb(160, 100, 255)" />

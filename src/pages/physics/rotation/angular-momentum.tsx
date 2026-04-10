@@ -19,6 +19,97 @@ export default function AngularMomentum() {
     const rollPosRef = useRef(0)
     const rollVelRef = useRef(0)
 
+    // --- Mouse drag state ---
+    const [dragging, setDragging] = useState<'leftArm' | 'rightArm' | 'disk' | null>(null)
+    const [hovered, setHovered] = useState<'leftArm' | 'rightArm' | 'disk' | null>(null)
+    // Store layout geometry for mouse handlers
+    const layoutRef = useRef<{
+        // skater mode
+        skaterCx: number; skaterCy: number; bodyH: number; armExtend: number; armAngle: number
+        leftArmTip: { x: number; y: number }; rightArmTip: { x: number; y: number }
+        // rolling mode
+        diskCenter: { x: number; y: number }; diskR: number
+        inclineStart: { x: number; y: number }; inclineEnd: { x: number; y: number }; inclineRad: number; maxDist: number
+    }>({
+        skaterCx: 0, skaterCy: 0, bodyH: 0, armExtend: 0, armAngle: 0,
+        leftArmTip: { x: 0, y: 0 }, rightArmTip: { x: 0, y: 0 },
+        diskCenter: { x: 0, y: 0 }, diskR: 25,
+        inclineStart: { x: 0, y: 0 }, inclineEnd: { x: 0, y: 0 }, inclineRad: 0, maxDist: 0,
+    })
+
+    const getCanvasPos = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
+        const canvas = canvasRef.current
+        if (!canvas) return { x: 0, y: 0 }
+        const rect = canvas.getBoundingClientRect()
+        return { x: e.clientX - rect.left, y: e.clientY - rect.top }
+    }, [])
+
+    const handleMouseDown = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
+        const { x, y } = getCanvasPos(e)
+        const lay = layoutRef.current
+        if (viewMode === 'skater') {
+            // Hit-test arm tips (generous radius)
+            const leftDist = Math.hypot(x - lay.leftArmTip.x, y - lay.leftArmTip.y)
+            const rightDist = Math.hypot(x - lay.rightArmTip.x, y - lay.rightArmTip.y)
+            if (leftDist < 22) { setDragging('leftArm'); e.preventDefault(); return }
+            if (rightDist < 22) { setDragging('rightArm'); e.preventDefault(); return }
+        } else {
+            // Hit-test rolling disk
+            const diskDist = Math.hypot(x - lay.diskCenter.x, y - lay.diskCenter.y)
+            if (diskDist < lay.diskR + 15) { setDragging('disk'); e.preventDefault(); return }
+        }
+    }, [viewMode, getCanvasPos])
+
+    const handleMouseMove = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
+        const { x, y } = getCanvasPos(e)
+        const lay = layoutRef.current
+
+        if (dragging === 'leftArm' || dragging === 'rightArm') {
+            // Map distance from skater center to armPosition (0 = tucked, 1 = extended)
+            const dist = Math.hypot(x - lay.skaterCx, y - (lay.skaterCy - lay.bodyH * 0.15))
+            // arms range from 20px (tucked) to 100px (extended)
+            const frac = Math.max(0, Math.min(1, (dist - 20) / 80))
+            setArmPosition(Math.round(frac * 100) / 100)
+            return
+        }
+        if (dragging === 'disk') {
+            // Map mouse position to distance along incline
+            const dx = x - lay.inclineStart.x
+            const dy = y - lay.inclineStart.y
+            // Project onto incline direction
+            const cosA = Math.cos(lay.inclineRad)
+            const sinA = Math.sin(lay.inclineRad)
+            const projDist = dx * cosA + dy * sinA
+            // Map back to rollPos (dist = rollPos * 80)
+            const newPos = Math.max(0, Math.min(lay.maxDist / 80, projDist / 80))
+            rollPosRef.current = newPos
+            rollVelRef.current = 0 // reset velocity when dragging
+            return
+        }
+
+        // Hover detection
+        if (viewMode === 'skater') {
+            const leftDist = Math.hypot(x - lay.leftArmTip.x, y - lay.leftArmTip.y)
+            const rightDist = Math.hypot(x - lay.rightArmTip.x, y - lay.rightArmTip.y)
+            if (leftDist < 22) setHovered('leftArm')
+            else if (rightDist < 22) setHovered('rightArm')
+            else setHovered(null)
+        } else {
+            const diskDist = Math.hypot(x - lay.diskCenter.x, y - lay.diskCenter.y)
+            if (diskDist < lay.diskR + 15) setHovered('disk')
+            else setHovered(null)
+        }
+    }, [dragging, viewMode, getCanvasPos])
+
+    const handleMouseUp = useCallback(() => {
+        setDragging(null)
+    }, [])
+
+    const handleMouseLeave = useCallback(() => {
+        setDragging(null)
+        setHovered(null)
+    }, [])
+
     // Skater: I ranges from compact (arms in) to extended (arms out)
     // I_min ~ point mass, I_max ~ arms extended
     const I_min = 0.5 * mass * skaterRadius * skaterRadius
@@ -142,18 +233,60 @@ export default function AngularMomentum() {
 
                 // Arms (rotate with angle)
                 const armAngle = thetaRef.current
+                const armBaseY = cy - bodyH * 0.15
+                const leftArmTipX = cx + Math.cos(armAngle) * armExtend
+                const leftArmTipY = armBaseY + Math.sin(armAngle) * armExtend * 0.3
+                const rightArmTipX = cx - Math.cos(armAngle) * armExtend
+                const rightArmTipY = armBaseY - Math.sin(armAngle) * armExtend * 0.3
+
+                // Store layout for mouse handlers
+                layoutRef.current.skaterCx = cx
+                layoutRef.current.skaterCy = cy
+                layoutRef.current.bodyH = bodyH
+                layoutRef.current.armExtend = armExtend
+                layoutRef.current.armAngle = armAngle
+                layoutRef.current.leftArmTip = { x: leftArmTipX, y: leftArmTipY }
+                layoutRef.current.rightArmTip = { x: rightArmTipX, y: rightArmTipY }
+
                 ctx.strokeStyle = 'rgba(200, 150, 255, 0.8)'
                 ctx.lineWidth = 3
                 // Left arm
                 ctx.beginPath()
-                ctx.moveTo(cx, cy - bodyH * 0.15)
-                ctx.lineTo(cx + Math.cos(armAngle) * armExtend, cy - bodyH * 0.15 + Math.sin(armAngle) * armExtend * 0.3)
+                ctx.moveTo(cx, armBaseY)
+                ctx.lineTo(leftArmTipX, leftArmTipY)
                 ctx.stroke()
                 // Right arm
                 ctx.beginPath()
-                ctx.moveTo(cx, cy - bodyH * 0.15)
-                ctx.lineTo(cx - Math.cos(armAngle) * armExtend, cy - bodyH * 0.15 - Math.sin(armAngle) * armExtend * 0.3)
+                ctx.moveTo(cx, armBaseY)
+                ctx.lineTo(rightArmTipX, rightArmTipY)
                 ctx.stroke()
+
+                // Arm tip grab handles
+                const leftAlpha = dragging === 'leftArm' ? 1.0 : hovered === 'leftArm' ? 0.8 : 0.35
+                const rightAlpha = dragging === 'rightArm' ? 1.0 : hovered === 'rightArm' ? 0.8 : 0.35
+                const handleR = dragging === 'leftArm' || dragging === 'rightArm' ? 8 : hovered === 'leftArm' || hovered === 'rightArm' ? 7 : 5
+
+                // Left arm handle
+                ctx.fillStyle = `rgba(200, 150, 255, ${leftAlpha})`
+                ctx.beginPath(); ctx.arc(leftArmTipX, leftArmTipY, handleR, 0, Math.PI * 2); ctx.fill()
+                ctx.strokeStyle = `rgba(255, 255, 255, ${leftAlpha * 0.8})`
+                ctx.lineWidth = 1.5
+                ctx.beginPath(); ctx.arc(leftArmTipX, leftArmTipY, handleR, 0, Math.PI * 2); ctx.stroke()
+
+                // Right arm handle
+                ctx.fillStyle = `rgba(200, 150, 255, ${rightAlpha})`
+                ctx.beginPath(); ctx.arc(rightArmTipX, rightArmTipY, handleR, 0, Math.PI * 2); ctx.fill()
+                ctx.strokeStyle = `rgba(255, 255, 255, ${rightAlpha * 0.8})`
+                ctx.lineWidth = 1.5
+                ctx.beginPath(); ctx.arc(rightArmTipX, rightArmTipY, handleR, 0, Math.PI * 2); ctx.stroke()
+
+                // Drag hint near arm tips
+                if ((hovered === 'leftArm' || hovered === 'rightArm') && !dragging) {
+                    const hintTip = hovered === 'leftArm' ? { x: leftArmTipX, y: leftArmTipY } : { x: rightArmTipX, y: rightArmTipY }
+                    ctx.fillStyle = 'rgba(200, 150, 255, 0.6)'
+                    ctx.font = '10px system-ui'; ctx.textAlign = 'center'
+                    ctx.fillText('drag to extend/tuck', hintTip.x, hintTip.y - 14)
+                }
 
                 // Legs
                 ctx.strokeStyle = 'rgba(160, 100, 255, 0.7)'
@@ -273,6 +406,14 @@ export default function AngularMomentum() {
                 const diskX = startX + dist * Math.cos(incRad) + diskR * Math.sin(incRad)
                 const diskY = startY + dist * Math.sin(incRad) - diskR * Math.cos(incRad)
 
+                // Store layout for mouse handlers
+                layoutRef.current.diskCenter = { x: diskX, y: diskY }
+                layoutRef.current.diskR = diskR
+                layoutRef.current.inclineStart = { x: startX, y: startY }
+                layoutRef.current.inclineEnd = { x: endX, y: endY }
+                layoutRef.current.inclineRad = incRad
+                layoutRef.current.maxDist = maxDist
+
                 // Disk glow
                 const diskGlow = ctx.createRadialGradient(diskX, diskY, diskR * 0.3, diskX, diskY, diskR * 1.5)
                 diskGlow.addColorStop(0, 'rgba(160, 100, 255, 0.15)')
@@ -305,6 +446,35 @@ export default function AngularMomentum() {
                 // Center
                 ctx.fillStyle = 'rgba(160, 100, 255, 0.9)'
                 ctx.beginPath(); ctx.arc(diskX, diskY, 4, 0, Math.PI * 2); ctx.fill()
+
+                // Disk drag affordance
+                const diskAlpha = dragging === 'disk' ? 1.0 : hovered === 'disk' ? 0.7 : 0.0
+                if (diskAlpha > 0) {
+                    ctx.strokeStyle = `rgba(255, 180, 80, ${diskAlpha})`
+                    ctx.lineWidth = 2
+                    ctx.setLineDash([4, 4])
+                    ctx.beginPath(); ctx.arc(diskX, diskY, diskR + 5, 0, Math.PI * 2); ctx.stroke()
+                    ctx.setLineDash([])
+                    // Move arrows along incline
+                    const arrowAlpha = dragging === 'disk' ? 0.9 : 0.5
+                    ctx.strokeStyle = `rgba(255, 180, 80, ${arrowAlpha})`
+                    ctx.lineWidth = 1.5
+                    // Forward arrow
+                    ctx.beginPath()
+                    ctx.moveTo(diskX + Math.cos(incRad) * (diskR + 10), diskY + Math.sin(incRad) * (diskR + 10))
+                    ctx.lineTo(diskX + Math.cos(incRad) * (diskR + 18), diskY + Math.sin(incRad) * (diskR + 18))
+                    ctx.stroke()
+                    // Backward arrow
+                    ctx.beginPath()
+                    ctx.moveTo(diskX - Math.cos(incRad) * (diskR + 10), diskY - Math.sin(incRad) * (diskR + 10))
+                    ctx.lineTo(diskX - Math.cos(incRad) * (diskR + 18), diskY - Math.sin(incRad) * (diskR + 18))
+                    ctx.stroke()
+                }
+                if (hovered === 'disk' && !dragging) {
+                    ctx.fillStyle = 'rgba(255, 180, 80, 0.6)'
+                    ctx.font = '10px system-ui'; ctx.textAlign = 'center'
+                    ctx.fillText('drag to reposition', diskX, diskY - diskR - 25)
+                }
 
                 // Velocity arrow
                 if (rollVelRef.current > 0.1) {
@@ -400,7 +570,7 @@ export default function AngularMomentum() {
 
         animId = requestAnimationFrame(draw)
         return () => { window.removeEventListener('resize', resize); cancelAnimationFrame(animId) }
-    }, [viewMode, armPosition, initialOmega, mass, skaterRadius, inclineAngle, showEnergyBars, paused, I_min, I_max, rollingAccel, rollingR, I_rolling])
+    }, [viewMode, armPosition, initialOmega, mass, skaterRadius, inclineAngle, showEnergyBars, paused, I_min, I_max, rollingAccel, rollingR, I_rolling, dragging, hovered])
 
     const curI_skater = I_min + armPosition * (I_max - I_min)
     const curOmega_skater = L / curI_skater
@@ -410,7 +580,15 @@ export default function AngularMomentum() {
         <div className="min-h-screen flex flex-col bg-[#0d0a1a] text-white overflow-hidden font-sans">
             <div className="flex-1 relative flex">
                 <div className="flex-1 relative">
-                    <canvas ref={canvasRef} className="w-full h-full block" />
+                    <canvas
+                        ref={canvasRef}
+                        className="w-full h-full block"
+                        style={{ cursor: dragging ? 'grabbing' : hovered ? 'grab' : 'default' }}
+                        onMouseDown={handleMouseDown}
+                        onMouseMove={handleMouseMove}
+                        onMouseUp={handleMouseUp}
+                        onMouseLeave={handleMouseLeave}
+                    />
 
                     <div className="absolute top-4 left-4 flex flex-col gap-3">
                         <APTag course="Physics 1" unit="Unit 6" color="rgb(160, 100, 255)" />

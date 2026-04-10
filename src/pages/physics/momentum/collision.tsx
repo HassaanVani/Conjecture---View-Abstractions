@@ -13,6 +13,8 @@ interface Ball {
     mass: number; radius: number; color: string
 }
 
+type DragTarget = 'ball1' | 'ball2' | 'vel1' | 'vel2' | null
+
 export default function Collision() {
     const canvasRef = useRef<HTMLCanvasElement>(null)
     const [isRunning, setIsRunning] = useState(false)
@@ -22,6 +24,11 @@ export default function Collision() {
     const [showVectors, setShowVectors] = useState(true)
     const [showMomentum, setShowMomentum] = useState(true)
     const [showCOMFrame, setShowCOMFrame] = useState(false)
+
+    // Drag state
+    const [dragTarget, setDragTarget] = useState<DragTarget>(null)
+    const [hoverTarget, setHoverTarget] = useState<DragTarget>(null)
+    const dragRef = useRef<DragTarget>(null)
 
     const stateRef = useRef<{ balls: Ball[] }>({
         balls: [
@@ -70,6 +77,90 @@ export default function Collision() {
     ]
 
     const demo = useDemoMode(demoSteps)
+
+    // --- Mouse interaction helpers ---
+    const getCanvasCoords = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
+        const canvas = canvasRef.current
+        if (!canvas) return { x: 0, y: 0 }
+        const rect = canvas.getBoundingClientRect()
+        return { x: e.clientX - rect.left, y: e.clientY - rect.top }
+    }, [])
+
+    const hitTest = useCallback((mx: number, my: number): DragTarget => {
+        const balls = stateRef.current.balls
+        const velArrowScale = 10
+        const handleRadius = 8
+        for (let i = 0; i < 2; i++) {
+            const b = balls[i]
+            // Check velocity arrow tip first (higher priority)
+            const tipX = b.x + b.vx * velArrowScale
+            const tipY = b.y + b.vy * velArrowScale
+            const dtip = Math.sqrt((mx - tipX) ** 2 + (my - tipY) ** 2)
+            if (dtip < handleRadius + 6) return (i === 0 ? 'vel1' : 'vel2') as DragTarget
+            // Check ball body
+            const db = Math.sqrt((mx - b.x) ** 2 + (my - b.y) ** 2)
+            if (db < b.radius + 4) return (i === 0 ? 'ball1' : 'ball2') as DragTarget
+        }
+        return null
+    }, [])
+
+    const handleMouseDown = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
+        if (isRunning) return
+        const { x, y } = getCanvasCoords(e)
+        const target = hitTest(x, y)
+        if (target) {
+            setDragTarget(target)
+            dragRef.current = target
+        }
+    }, [isRunning, getCanvasCoords, hitTest])
+
+    const handleMouseMove = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
+        const { x, y } = getCanvasCoords(e)
+        const canvas = canvasRef.current
+        if (!canvas) return
+
+        if (dragRef.current && !isRunning) {
+            const balls = stateRef.current.balls
+            const w = canvas.offsetWidth
+            const velArrowScale = 10
+            switch (dragRef.current) {
+                case 'ball1': {
+                    balls[0].x = Math.max(balls[0].radius, Math.min(x, w - balls[0].radius))
+                    break
+                }
+                case 'ball2': {
+                    balls[1].x = Math.max(balls[1].radius, Math.min(x, w - balls[1].radius))
+                    break
+                }
+                case 'vel1': {
+                    balls[0].vx = (x - balls[0].x) / velArrowScale
+                    break
+                }
+                case 'vel2': {
+                    balls[1].vx = (x - balls[1].x) / velArrowScale
+                    break
+                }
+            }
+        } else {
+            // Hover detection
+            const target = hitTest(x, y)
+            setHoverTarget(isRunning ? null : target)
+        }
+    }, [isRunning, getCanvasCoords, hitTest])
+
+    const handleMouseUp = useCallback(() => {
+        setDragTarget(null)
+        dragRef.current = null
+    }, [])
+
+    const handleMouseLeave = useCallback(() => {
+        setDragTarget(null)
+        dragRef.current = null
+        setHoverTarget(null)
+    }, [])
+
+    // Compute cursor style
+    const canvasCursor = dragTarget ? 'cursor-grabbing' : hoverTarget ? 'cursor-grab' : ''
 
     useEffect(() => {
         const canvas = canvasRef.current
@@ -141,9 +232,24 @@ export default function Collision() {
             ctx.fillStyle = PC; ctx.font = '10px monospace'; ctx.textAlign = 'center'
             ctx.fillText('COM', comX, 14)
 
-            balls.forEach(b => {
+            balls.forEach((b, idx) => {
                 const bx = showCOMFrame ? w / 2 + (b.x - comX) : b.x
                 const by = b.y
+
+                // Draw subtle drag affordance ring when not running
+                if (!isRunning && !showCOMFrame) {
+                    const isDraggedBall = dragRef.current === (idx === 0 ? 'ball1' : 'ball2')
+                    const isHoveredBall = !dragRef.current && hoverTarget === (idx === 0 ? 'ball1' : 'ball2')
+                    if (isDraggedBall || isHoveredBall) {
+                        ctx.strokeStyle = isDraggedBall ? 'rgba(255,255,255,0.4)' : 'rgba(255,255,255,0.2)'
+                        ctx.lineWidth = 2
+                        ctx.setLineDash([4, 4])
+                        ctx.beginPath()
+                        ctx.arc(bx, by, b.radius + 6, 0, Math.PI * 2)
+                        ctx.stroke()
+                        ctx.setLineDash([])
+                    }
+                }
 
                 ctx.fillStyle = b.color; ctx.beginPath()
                 ctx.arc(bx, by, b.radius, 0, Math.PI * 2); ctx.fill()
@@ -153,13 +259,37 @@ export default function Collision() {
 
                 if (showVectors) {
                     const vx = showCOMFrame ? b.vx - comVxNow : b.vx
-                    drawArrow(bx, by, bx + vx * 10, by + b.vy * 10, 'rgba(255,255,255,0.5)', 'v')
+                    const tipX = bx + vx * 10
+                    const tipY = by + b.vy * 10
+                    drawArrow(bx, by, tipX, tipY, 'rgba(255,255,255,0.5)', 'v')
+
+                    // Velocity arrow drag handle (small circle at tip) when not running
+                    if (!isRunning && !showCOMFrame) {
+                        const isVelDragged = dragRef.current === (idx === 0 ? 'vel1' : 'vel2')
+                        const isVelHovered = !dragRef.current && hoverTarget === (idx === 0 ? 'vel1' : 'vel2')
+                        ctx.beginPath()
+                        ctx.arc(tipX, tipY, isVelDragged ? 6 : 5, 0, Math.PI * 2)
+                        ctx.fillStyle = isVelDragged ? 'rgba(255,255,255,0.8)' : isVelHovered ? 'rgba(255,255,255,0.6)' : 'rgba(255,255,255,0.3)'
+                        ctx.fill()
+                        ctx.strokeStyle = 'rgba(255,255,255,0.5)'
+                        ctx.lineWidth = 1
+                        ctx.stroke()
+                    }
                 }
                 if (showMomentum) {
                     const mvx = showCOMFrame ? b.mass * (b.vx - comVxNow) : b.mass * b.vx
                     drawArrow(bx, by + b.radius + 5, bx + mvx * 3, by + b.radius + 5, b.color, 'p')
                 }
             })
+
+            // Draw hint text when paused/not running and not dragging
+            if (!isRunning && !dragRef.current && !showCOMFrame) {
+                ctx.fillStyle = 'rgba(255,255,255,0.25)'
+                ctx.font = '11px system-ui'
+                ctx.textAlign = 'center'
+                ctx.textBaseline = 'alphabetic'
+                ctx.fillText('drag balls to reposition \u2022 drag arrow tips to set velocity', w / 2, h - 16)
+            }
 
             if (showCOMFrame) {
                 ctx.fillStyle = 'rgba(160,100,255,0.15)'; ctx.fillRect(0, 0, w, h)
@@ -172,7 +302,7 @@ export default function Collision() {
 
         animId = requestAnimationFrame(animate)
         return () => { window.removeEventListener('resize', resize); cancelAnimationFrame(animId) }
-    }, [isRunning, mass1, mass2, elasticity, showVectors, showMomentum, showCOMFrame, reset])
+    }, [isRunning, mass1, mass2, elasticity, showVectors, showMomentum, showCOMFrame, reset, dragTarget, hoverTarget])
 
     return (
         <div className="min-h-screen flex flex-col bg-[#0d0a1a] text-white font-sans overflow-hidden">
@@ -196,7 +326,14 @@ export default function Collision() {
 
             <div className="flex-1 relative flex">
                 <div className="flex-1 relative">
-                    <canvas ref={canvasRef} className="w-full h-full block" />
+                    <canvas
+                        ref={canvasRef}
+                        className={`w-full h-full block ${canvasCursor}`}
+                        onMouseDown={handleMouseDown}
+                        onMouseMove={handleMouseMove}
+                        onMouseUp={handleMouseUp}
+                        onMouseLeave={handleMouseLeave}
+                    />
 
                     <div className="absolute top-4 left-4 flex flex-col gap-3 max-w-[260px]">
                         <EquationDisplay departmentColor={PC} equations={[

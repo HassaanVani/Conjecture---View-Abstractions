@@ -22,6 +22,16 @@ export default function ChargeDistributions() {
     const timeRef = useRef(0)
     const highlightRef = useRef(0)
 
+    // --- Drag state for mouse interaction ---
+    const [canvasCursor, setCanvasCursor] = useState('default')
+    const draggingRef = useRef<'obsPoint' | 'dimension' | null>(null)
+    // Store layout geometry so mouse handlers can use it
+    const layoutRef = useRef({
+        cx: 0, cy: 0, pxPerM: 0,
+        obsX: 0, obsY: 0,
+        dimEndX: 0, dimEndY: 0, dimEndX2: 0, dimEndY2: 0,
+    })
+
     const calcAnalytical = useCallback(() => {
         const Q = totalCharge * 1e-9
         const x = obsDistance
@@ -105,6 +115,115 @@ export default function ChargeDistributions() {
         highlightRef.current = 0
     }, [])
 
+    // --- Mouse event handlers for canvas dragging ---
+    const getCanvasPos = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
+        const canvas = canvasRef.current
+        if (!canvas) return { x: 0, y: 0 }
+        const rect = canvas.getBoundingClientRect()
+        return { x: e.clientX - rect.left, y: e.clientY - rect.top }
+    }, [])
+
+    const handleMouseDown = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
+        const pos = getCanvasPos(e)
+        const layout = layoutRef.current
+        const type = distType as DistributionType
+
+        if (type === 'plane') return // no draggable elements for infinite plane
+
+        // Hit-test observation point (priority)
+        const dxObs = pos.x - layout.obsX
+        const dyObs = pos.y - layout.obsY
+        if (Math.sqrt(dxObs * dxObs + dyObs * dyObs) < 22) {
+            draggingRef.current = 'obsPoint'
+            setCanvasCursor('grabbing')
+            return
+        }
+
+        // Hit-test dimension endpoint (line end or ring/disk outer edge)
+        if (type === 'line') {
+            // Top end of line
+            const dtTop = Math.sqrt((pos.x - layout.dimEndX) ** 2 + (pos.y - layout.dimEndY) ** 2)
+            const dtBot = Math.sqrt((pos.x - layout.dimEndX2) ** 2 + (pos.y - layout.dimEndY2) ** 2)
+            if (dtTop < 18 || dtBot < 18) {
+                draggingRef.current = 'dimension'
+                setCanvasCursor('grabbing')
+                return
+            }
+        } else if (type === 'ring' || type === 'disk') {
+            // Outer edge of ring/disk (top or bottom)
+            const dtTop = Math.sqrt((pos.x - layout.dimEndX) ** 2 + (pos.y - layout.dimEndY) ** 2)
+            const dtBot = Math.sqrt((pos.x - layout.dimEndX2) ** 2 + (pos.y - layout.dimEndY2) ** 2)
+            if (dtTop < 18 || dtBot < 18) {
+                draggingRef.current = 'dimension'
+                setCanvasCursor('grabbing')
+                return
+            }
+        }
+    }, [distType, getCanvasPos])
+
+    const handleMouseMove = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
+        const pos = getCanvasPos(e)
+        const layout = layoutRef.current
+        const type = distType as DistributionType
+
+        if (draggingRef.current === 'obsPoint') {
+            // Convert pixel X to observation distance in meters
+            const rawDist = (pos.x - layout.cx) / layout.pxPerM
+            const clamped = Math.max(0.05, Math.min(1.0, rawDist))
+            setObsDistance(Math.round(clamped * 100) / 100) // snap to 0.01
+            return
+        }
+
+        if (draggingRef.current === 'dimension') {
+            if (type === 'line') {
+                // Drag vertically to change line length
+                const dy = Math.abs(pos.y - layout.cy)
+                const halfLen = dy / layout.pxPerM
+                const newLen = Math.max(0.1, Math.min(1.5, halfLen * 2))
+                setDimension(Math.round(newLen * 20) / 20) // snap to 0.05
+            } else {
+                // Ring/disk: drag vertically to change radius
+                const dy = Math.abs(pos.y - layout.cy)
+                const newR = Math.max(0.1, Math.min(1.5, dy / layout.pxPerM))
+                setDimension(Math.round(newR * 20) / 20) // snap to 0.05
+            }
+            return
+        }
+
+        // Hover cursor logic
+        if (type === 'plane') {
+            setCanvasCursor('default')
+            return
+        }
+
+        const dxObs = pos.x - layout.obsX
+        const dyObs = pos.y - layout.obsY
+        if (Math.sqrt(dxObs * dxObs + dyObs * dyObs) < 22) {
+            setCanvasCursor('grab')
+            return
+        }
+
+        // Check dimension endpoints
+        const dtTop = Math.sqrt((pos.x - layout.dimEndX) ** 2 + (pos.y - layout.dimEndY) ** 2)
+        const dtBot = Math.sqrt((pos.x - layout.dimEndX2) ** 2 + (pos.y - layout.dimEndY2) ** 2)
+        if (dtTop < 18 || dtBot < 18) {
+            setCanvasCursor('grab')
+            return
+        }
+
+        setCanvasCursor('default')
+    }, [distType, getCanvasPos])
+
+    const handleMouseUp = useCallback(() => {
+        draggingRef.current = null
+        setCanvasCursor('default')
+    }, [])
+
+    const handleMouseLeave = useCallback(() => {
+        draggingRef.current = null
+        setCanvasCursor('default')
+    }, [])
+
     const demoSteps = [
         { title: 'Continuous Distributions', description: 'Real charge distributions are continuous, not point charges. We compute the E-field by breaking the distribution into infinitesimal dQ elements and integrating their contributions using superposition.', setup: () => { reset() } },
         { title: 'Line Charge', description: 'A uniform line charge with linear charge density lambda = Q/L. The E-field at distance r from an infinite line: E = 2k*lambda/r. Perpendicular components cancel by symmetry.', setup: () => { setDistType('line'); setNumElements(20); setShowIndividualDE(true) } },
@@ -146,6 +265,11 @@ export default function ChargeDistributions() {
             const cy = h * 0.5
             const pxPerM = Math.min(w, h) * 0.6 // pixels per meter
 
+            // Store layout for mouse handlers
+            layoutRef.current.cx = cx
+            layoutRef.current.cy = cy
+            layoutRef.current.pxPerM = pxPerM
+
             // Grid
             ctx.strokeStyle = 'rgba(255,255,255,0.04)'
             ctx.lineWidth = 1
@@ -162,6 +286,12 @@ export default function ChargeDistributions() {
             const drawCharge = () => {
                 if (type === 'line') {
                     const L = dimension * pxPerM
+                    // Store dimension endpoints for dragging
+                    layoutRef.current.dimEndX = cx
+                    layoutRef.current.dimEndY = cy - L / 2
+                    layoutRef.current.dimEndX2 = cx
+                    layoutRef.current.dimEndY2 = cy + L / 2
+
                     // Draw line
                     ctx.strokeStyle = 'rgba(160, 100, 255, 0.6)'
                     ctx.lineWidth = 4
@@ -169,6 +299,21 @@ export default function ChargeDistributions() {
                     ctx.moveTo(cx, cy - L / 2)
                     ctx.lineTo(cx, cy + L / 2)
                     ctx.stroke()
+
+                    // Dimension drag handles at endpoints
+                    const dimHandleR = draggingRef.current === 'dimension' ? 7 : 5
+                    const dimHandleAlpha = draggingRef.current === 'dimension' ? 1.0 : 0.5
+                    ctx.fillStyle = `rgba(160, 100, 255, ${dimHandleAlpha})`
+                    ctx.beginPath(); ctx.arc(cx, cy - L / 2, dimHandleR, 0, Math.PI * 2); ctx.fill()
+                    ctx.beginPath(); ctx.arc(cx, cy + L / 2, dimHandleR, 0, Math.PI * 2); ctx.fill()
+                    if (draggingRef.current !== 'dimension') {
+                        ctx.strokeStyle = 'rgba(160, 100, 255, 0.2)'
+                        ctx.lineWidth = 1
+                        ctx.setLineDash([2, 3])
+                        ctx.beginPath(); ctx.arc(cx, cy - L / 2, 12, 0, Math.PI * 2); ctx.stroke()
+                        ctx.beginPath(); ctx.arc(cx, cy + L / 2, 12, 0, Math.PI * 2); ctx.stroke()
+                        ctx.setLineDash([])
+                    }
 
                     // Draw dQ elements
                     const dL = L / N
@@ -224,12 +369,33 @@ export default function ChargeDistributions() {
                     }
                 } else if (type === 'ring') {
                     const R = dimension * pxPerM
+                    // Store dimension endpoints (top/bottom of ring)
+                    layoutRef.current.dimEndX = cx
+                    layoutRef.current.dimEndY = cy - R
+                    layoutRef.current.dimEndX2 = cx
+                    layoutRef.current.dimEndY2 = cy + R
+
                     // Draw ring as ellipse (3D perspective)
                     ctx.strokeStyle = 'rgba(160, 100, 255, 0.4)'
                     ctx.lineWidth = 2
                     ctx.beginPath()
                     ctx.ellipse(cx, cy, R * 0.3, R, 0, 0, Math.PI * 2)
                     ctx.stroke()
+
+                    // Dimension drag handles at top/bottom of ring
+                    const ringHandleR = draggingRef.current === 'dimension' ? 7 : 5
+                    const ringHandleAlpha = draggingRef.current === 'dimension' ? 1.0 : 0.5
+                    ctx.fillStyle = `rgba(160, 100, 255, ${ringHandleAlpha})`
+                    ctx.beginPath(); ctx.arc(cx, cy - R, ringHandleR, 0, Math.PI * 2); ctx.fill()
+                    ctx.beginPath(); ctx.arc(cx, cy + R, ringHandleR, 0, Math.PI * 2); ctx.fill()
+                    if (draggingRef.current !== 'dimension') {
+                        ctx.strokeStyle = 'rgba(160, 100, 255, 0.2)'
+                        ctx.lineWidth = 1
+                        ctx.setLineDash([2, 3])
+                        ctx.beginPath(); ctx.arc(cx, cy - R, 12, 0, Math.PI * 2); ctx.stroke()
+                        ctx.beginPath(); ctx.arc(cx, cy + R, 12, 0, Math.PI * 2); ctx.stroke()
+                        ctx.setLineDash([])
+                    }
 
                     // dQ elements on ring
                     for (let i = 0; i < N; i++) {
@@ -279,6 +445,27 @@ export default function ChargeDistributions() {
                     ctx.setLineDash([])
                 } else if (type === 'disk') {
                     const R = dimension * pxPerM
+                    // Store dimension endpoints (top/bottom of disk)
+                    layoutRef.current.dimEndX = cx
+                    layoutRef.current.dimEndY = cy - R
+                    layoutRef.current.dimEndX2 = cx
+                    layoutRef.current.dimEndY2 = cy + R
+
+                    // Dimension drag handles at top/bottom of disk
+                    const diskHandleR = draggingRef.current === 'dimension' ? 7 : 5
+                    const diskHandleAlpha = draggingRef.current === 'dimension' ? 1.0 : 0.5
+                    ctx.fillStyle = `rgba(160, 100, 255, ${diskHandleAlpha})`
+                    ctx.beginPath(); ctx.arc(cx, cy - R, diskHandleR, 0, Math.PI * 2); ctx.fill()
+                    ctx.beginPath(); ctx.arc(cx, cy + R, diskHandleR, 0, Math.PI * 2); ctx.fill()
+                    if (draggingRef.current !== 'dimension') {
+                        ctx.strokeStyle = 'rgba(160, 100, 255, 0.2)'
+                        ctx.lineWidth = 1
+                        ctx.setLineDash([2, 3])
+                        ctx.beginPath(); ctx.arc(cx, cy - R, 12, 0, Math.PI * 2); ctx.stroke()
+                        ctx.beginPath(); ctx.arc(cx, cy + R, 12, 0, Math.PI * 2); ctx.stroke()
+                        ctx.setLineDash([])
+                    }
+
                     // Draw concentric rings
                     for (let i = 0; i < N; i++) {
                         const ri = ((i + 0.5) / N) * R
@@ -382,17 +569,43 @@ export default function ChargeDistributions() {
             if (type !== 'plane') {
                 const obsX = cx + obsDistance * pxPerM
                 const obsY = cy
-                const obsGlow = ctx.createRadialGradient(obsX, obsY, 0, obsX, obsY, 20)
-                obsGlow.addColorStop(0, 'rgba(100, 255, 150, 0.4)')
+                // Store for mouse handlers
+                layoutRef.current.obsX = obsX
+                layoutRef.current.obsY = obsY
+
+                const isDraggingObs = draggingRef.current === 'obsPoint'
+
+                const obsGlow = ctx.createRadialGradient(obsX, obsY, 0, obsX, obsY, isDraggingObs ? 28 : 20)
+                obsGlow.addColorStop(0, isDraggingObs ? 'rgba(100, 255, 150, 0.6)' : 'rgba(100, 255, 150, 0.4)')
                 obsGlow.addColorStop(1, 'transparent')
                 ctx.fillStyle = obsGlow
-                ctx.beginPath(); ctx.arc(obsX, obsY, 20, 0, Math.PI * 2); ctx.fill()
-                ctx.fillStyle = 'rgba(100, 255, 150, 0.9)'
-                ctx.beginPath(); ctx.arc(obsX, obsY, 6, 0, Math.PI * 2); ctx.fill()
+                ctx.beginPath(); ctx.arc(obsX, obsY, isDraggingObs ? 28 : 20, 0, Math.PI * 2); ctx.fill()
+
+                // Crosshair probe icon
+                ctx.fillStyle = isDraggingObs ? 'rgba(100, 255, 150, 1.0)' : 'rgba(100, 255, 150, 0.9)'
+                ctx.beginPath(); ctx.arc(obsX, obsY, isDraggingObs ? 8 : 6, 0, Math.PI * 2); ctx.fill()
+                // Crosshair lines
+                const chLen = isDraggingObs ? 14 : 10
+                ctx.strokeStyle = isDraggingObs ? 'rgba(100, 255, 150, 0.8)' : 'rgba(100, 255, 150, 0.5)'
+                ctx.lineWidth = 1.5
+                ctx.beginPath(); ctx.moveTo(obsX - chLen, obsY); ctx.lineTo(obsX - 4, obsY); ctx.stroke()
+                ctx.beginPath(); ctx.moveTo(obsX + 4, obsY); ctx.lineTo(obsX + chLen, obsY); ctx.stroke()
+                ctx.beginPath(); ctx.moveTo(obsX, obsY - chLen); ctx.lineTo(obsX, obsY - 4); ctx.stroke()
+                ctx.beginPath(); ctx.moveTo(obsX, obsY + 4); ctx.lineTo(obsX, obsY + chLen); ctx.stroke()
+
                 ctx.fillStyle = 'rgba(255,255,255,0.9)'
                 ctx.font = 'bold 10px system-ui'
                 ctx.textAlign = 'center'
                 ctx.fillText('P', obsX, obsY + 3)
+
+                // Drag affordance ring
+                if (!isDraggingObs) {
+                    ctx.strokeStyle = 'rgba(100, 255, 150, 0.2)'
+                    ctx.lineWidth = 1
+                    ctx.setLineDash([3, 3])
+                    ctx.beginPath(); ctx.arc(obsX, obsY, 18, 0, Math.PI * 2); ctx.stroke()
+                    ctx.setLineDash([])
+                }
 
                 // Distance label
                 ctx.strokeStyle = 'rgba(255,255,255,0.2)'
@@ -469,7 +682,15 @@ export default function ChargeDistributions() {
         <div className="min-h-screen flex flex-col bg-[#0d0a1a] text-white overflow-hidden font-sans">
             <div className="flex-1 relative flex">
                 <div className="flex-1 relative">
-                    <canvas ref={canvasRef} className="w-full h-full block" />
+                    <canvas
+                        ref={canvasRef}
+                        className="w-full h-full block"
+                        style={{ cursor: canvasCursor }}
+                        onMouseDown={handleMouseDown}
+                        onMouseMove={handleMouseMove}
+                        onMouseUp={handleMouseUp}
+                        onMouseLeave={handleMouseLeave}
+                    />
 
                     <div className="absolute top-4 left-4 flex flex-col gap-3">
                         <APTag course="Physics C: E&M" unit="Unit 1" color="rgb(160, 100, 255)" />

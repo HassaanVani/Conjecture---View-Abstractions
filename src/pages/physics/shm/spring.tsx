@@ -18,6 +18,13 @@ export default function SpringMass() {
     const [showEnergy, setShowEnergy] = useState(true)
     const [showPhaseSpace, setShowPhaseSpace] = useState(true)
 
+    // Mouse drag state
+    const [isDragging, setIsDragging] = useState(false)
+    const [isHoveringMass, setIsHoveringMass] = useState(false)
+    const massPosRef = useRef({ x: 0, y: 0, w: 0, h: 0 }) // box bounds
+    const mountYRef = useRef(50)
+    const unstrLenRef = useRef(150)
+
     const stateRef = useRef({
         y: 100, vy: 0, t: 0,
         history: [] as { t: number; y: number }[],
@@ -36,6 +43,68 @@ export default function SpringMass() {
         setIsRunning(false)
         stateRef.current = { y: 100, vy: 0, t: 0, history: [], phaseHistory: [] }
     }, [])
+
+    // Mouse interaction handlers
+    const getCanvasPos = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
+        const canvas = canvasRef.current
+        if (!canvas) return { x: 0, y: 0 }
+        const rect = canvas.getBoundingClientRect()
+        return { x: e.clientX - rect.left, y: e.clientY - rect.top }
+    }, [])
+
+    const handleMouseDown = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
+        const pos = getCanvasPos(e)
+        const mp = massPosRef.current
+        // Hit test: check if click is near the mass box
+        if (pos.x >= mp.x - 15 && pos.x <= mp.x + mp.w + 15 &&
+            pos.y >= mp.y - 15 && pos.y <= mp.y + mp.h + 15) {
+            setIsDragging(true)
+            setIsRunning(false)
+        }
+    }, [getCanvasPos])
+
+    const handleMouseMove = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
+        const pos = getCanvasPos(e)
+        const mp = massPosRef.current
+
+        // Hover detection
+        const nearMass = pos.x >= mp.x - 15 && pos.x <= mp.x + mp.w + 15 &&
+                         pos.y >= mp.y - 15 && pos.y <= mp.y + mp.h + 15
+        setIsHoveringMass(!isDragging && nearMass)
+
+        if (isDragging) {
+            const mountY = mountYRef.current
+            const unstrLen = unstrLenRef.current
+            const boxSize = 40 + Math.sqrt(mass) * 5
+            // The spring attaches to the top of the box, so:
+            // mountY + unstrLen + s.y = top of box
+            // s.y = mouseY - mountY - unstrLen (mouse targets top of box)
+            const newY = pos.y - mountY - unstrLen - boxSize / 2
+            // Clamp so spring doesn't compress too much or stretch too far
+            const clampedY = Math.max(-80, Math.min(400, newY))
+            stateRef.current.y = clampedY
+            stateRef.current.vy = 0
+            stateRef.current.t = 0
+            stateRef.current.history = []
+            stateRef.current.phaseHistory = []
+        }
+    }, [isDragging, getCanvasPos, mass])
+
+    const handleMouseUp = useCallback(() => {
+        if (isDragging) {
+            setIsDragging(false)
+            // Auto-start oscillation when released
+            setIsRunning(true)
+        }
+    }, [isDragging])
+
+    const handleMouseLeave = useCallback(() => {
+        if (isDragging) {
+            setIsDragging(false)
+            setIsRunning(true)
+        }
+        setIsHoveringMass(false)
+    }, [isDragging])
 
     const demoSteps = [
         { title: 'Simple Harmonic Motion', description: 'A mass on a spring oscillates around its equilibrium position. The restoring force is proportional to displacement: F = -kx.', highlight: 'Press Start to begin oscillation.' },
@@ -117,12 +186,37 @@ export default function SpringMass() {
 
             // Mass box
             const boxSize = 40 + Math.sqrt(mass) * 5
+            const boxX = cx - boxSize / 2
+            const boxY = mountY + curLen
+            massPosRef.current = { x: boxX, y: boxY, w: boxSize, h: boxSize }
+            mountYRef.current = mountY
+            unstrLenRef.current = unstrLen
+
             ctx.fillStyle = PC; ctx.shadowColor = PC; ctx.shadowBlur = 10
-            ctx.fillRect(cx - boxSize / 2, mountY + curLen, boxSize, boxSize)
+            ctx.fillRect(boxX, boxY, boxSize, boxSize)
             ctx.shadowBlur = 0
-            ctx.strokeStyle = 'rgba(255,255,255,0.2)'; ctx.strokeRect(cx - boxSize / 2, mountY + curLen, boxSize, boxSize)
+            ctx.strokeStyle = 'rgba(255,255,255,0.2)'; ctx.strokeRect(boxX, boxY, boxSize, boxSize)
             ctx.fillStyle = 'white'; ctx.font = 'bold 12px monospace'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'
-            ctx.fillText(`${mass}kg`, cx, mountY + curLen + boxSize / 2)
+            ctx.fillText(`${mass}kg`, cx, boxY + boxSize / 2)
+
+            // Drag handle indicator (dots on sides of mass box when not running)
+            if (!isRunning) {
+                const handleDots = [
+                    { x: boxX - 6, y: boxY + boxSize / 2 },
+                    { x: boxX + boxSize + 6, y: boxY + boxSize / 2 },
+                    { x: cx, y: boxY - 6 },
+                    { x: cx, y: boxY + boxSize + 6 },
+                ]
+                handleDots.forEach(d => {
+                    ctx.fillStyle = 'rgba(255, 255, 255, 0.3)'
+                    ctx.beginPath(); ctx.arc(d.x, d.y, 2, 0, Math.PI * 2); ctx.fill()
+                })
+                // Small drag label below
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.3)'
+                ctx.font = '9px monospace'
+                ctx.textAlign = 'center'; ctx.textBaseline = 'top'
+                ctx.fillText('drag', cx, boxY + boxSize + 10)
+            }
 
             // Equilibrium line
             const eqY = mountY + unstrLen + yEq
@@ -233,7 +327,14 @@ export default function SpringMass() {
 
             <div className="flex-1 relative flex">
                 <div className="flex-1 relative">
-                    <canvas ref={canvasRef} className="w-full h-full block" />
+                    <canvas
+                        ref={canvasRef}
+                        className={`w-full h-full block ${isDragging ? 'cursor-grabbing' : isHoveringMass ? 'cursor-grab' : ''}`}
+                        onMouseDown={handleMouseDown}
+                        onMouseMove={handleMouseMove}
+                        onMouseUp={handleMouseUp}
+                        onMouseLeave={handleMouseLeave}
+                    />
 
                     <div className="absolute bottom-4 left-4 flex flex-col gap-3 max-w-[260px]">
                         <EquationDisplay departmentColor={PC} equations={[

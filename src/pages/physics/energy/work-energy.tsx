@@ -20,6 +20,143 @@ export default function WorkEnergy() {
 
     const g = 9.8
 
+    // --- Mouse drag state ---
+    const [dragTarget, setDragTarget] = useState<'none' | 'block' | 'force'>('none')
+    const [hoverTarget, setHoverTarget] = useState<'none' | 'block' | 'force'>('none')
+    const dragTargetRef = useRef<'none' | 'block' | 'force'>('none')
+    const wasPausedBeforeDrag = useRef(false)
+
+    const getCanvasCoords = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
+        const canvas = canvasRef.current
+        if (!canvas) return { x: 0, y: 0 }
+        const rect = canvas.getBoundingClientRect()
+        return { x: e.clientX - rect.left, y: e.clientY - rect.top }
+    }, [])
+
+    const handleMouseDown = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
+        const canvas = canvasRef.current
+        if (!canvas) return
+        const { x, y } = getCanvasCoords(e)
+        const w = canvas.offsetWidth
+        const h = canvas.offsetHeight
+
+        // Surface geometry (must match draw code)
+        const leftW = w * 0.45
+        const surfY = h * 0.6
+        const surfLeft = 30
+        const surfRight = leftW - 20
+        const surfLen = surfRight - surfLeft
+        const pxPerM = surfLen / maxDisplacement
+        const blockSize = 40
+        const d = posRef.current
+        const blockX = surfLeft + d * pxPerM
+        const blockTop = surfY - blockSize
+
+        // Force arrow tip position
+        const arrowLen = Math.min(60, forceMag * 1.5)
+        const aRad = (forceAngle * Math.PI) / 180
+        const ax = blockX - blockSize / 2 - 5
+        const ay = blockTop + blockSize / 2
+        const tipX = ax + arrowLen * Math.cos(aRad)
+        const tipY = ay - arrowLen * Math.sin(aRad)
+
+        // Hit test force arrow tip first (it's smaller, so prioritize)
+        const distToTip = Math.sqrt((x - tipX) ** 2 + (y - tipY) ** 2)
+        if (distToTip < 18) {
+            wasPausedBeforeDrag.current = paused
+            setPaused(true)
+            setDragTarget('force')
+            dragTargetRef.current = 'force'
+            e.preventDefault()
+            return
+        }
+
+        // Hit test block
+        if (x >= blockX - blockSize / 2 - 10 && x <= blockX + blockSize / 2 + 10 &&
+            y >= blockTop - 10 && y <= surfY + 10) {
+            wasPausedBeforeDrag.current = paused
+            setPaused(true)
+            setDragTarget('block')
+            dragTargetRef.current = 'block'
+            e.preventDefault()
+            return
+        }
+    }, [forceMag, forceAngle, maxDisplacement, paused, getCanvasCoords])
+
+    const handleMouseMove = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
+        const canvas = canvasRef.current
+        if (!canvas) return
+        const { x, y } = getCanvasCoords(e)
+        const w = canvas.offsetWidth
+        const h = canvas.offsetHeight
+
+        const leftW = w * 0.45
+        const surfY = h * 0.6
+        const surfLeft = 30
+        const surfRight = leftW - 20
+        const surfLen = surfRight - surfLeft
+        const pxPerM = surfLen / maxDisplacement
+        const blockSize = 40
+        const d = posRef.current
+        const blockX = surfLeft + d * pxPerM
+        const blockTop = surfY - blockSize
+
+        if (dragTargetRef.current === 'block') {
+            // Drag block horizontally -> update displacement
+            const newD = Math.max(0, Math.min(maxDisplacement, (x - surfLeft) / pxPerM))
+            posRef.current = newD
+            velRef.current = 0
+        } else if (dragTargetRef.current === 'force') {
+            // Drag force arrow tip -> update magnitude and angle
+            const ax = blockX - blockSize / 2 - 5
+            const ay = blockTop + blockSize / 2
+            const dx = x - ax
+            const dy = -(y - ay) // flip y so up is positive
+            const dist = Math.sqrt(dx * dx + dy * dy)
+            const newMag = Math.max(0, Math.min(80, Math.round(dist / 1.5)))
+            const newAngle = Math.max(0, Math.min(89, Math.round(Math.atan2(dy, dx) * 180 / Math.PI)))
+            setForceMag(newMag)
+            if (newAngle >= 0) setForceAngle(newAngle)
+        } else {
+            // Hover detection
+            const arrowLen = Math.min(60, forceMag * 1.5)
+            const aRad = (forceAngle * Math.PI) / 180
+            const ax = blockX - blockSize / 2 - 5
+            const ay = blockTop + blockSize / 2
+            const tipX = ax + arrowLen * Math.cos(aRad)
+            const tipY = ay - arrowLen * Math.sin(aRad)
+
+            const distToTip = Math.sqrt((x - tipX) ** 2 + (y - tipY) ** 2)
+            const onBlock = x >= blockX - blockSize / 2 - 10 && x <= blockX + blockSize / 2 + 10 &&
+                y >= blockTop - 10 && y <= surfY + 10
+
+            if (distToTip < 18) setHoverTarget('force')
+            else if (onBlock) setHoverTarget('block')
+            else setHoverTarget('none')
+        }
+    }, [maxDisplacement, forceMag, forceAngle, getCanvasCoords])
+
+    const handleMouseUp = useCallback(() => {
+        if (dragTargetRef.current !== 'none') {
+            dragTargetRef.current = 'none'
+            setDragTarget('none')
+            if (!wasPausedBeforeDrag.current) {
+                setPaused(false)
+            }
+        }
+    }, [])
+
+    const handleMouseLeave = useCallback(() => {
+        if (dragTargetRef.current !== 'none') {
+            dragTargetRef.current = 'none'
+            setDragTarget('none')
+            if (!wasPausedBeforeDrag.current) {
+                setPaused(false)
+            }
+        }
+        setHoverTarget('none')
+    }, [])
+
     const calcPhysics = useCallback((d: number) => {
         const thetaRad = (forceAngle * Math.PI) / 180
         const Fx = forceMag * Math.cos(thetaRad)
@@ -173,6 +310,22 @@ export default function WorkEnergy() {
             ctx.textAlign = 'center'
             ctx.fillText(`${mass}kg`, blockX, surfY - blockSize / 2 + 4)
 
+            // Block grab handles (4 corner dots)
+            const blockHandleAlpha = dragTarget === 'block' ? 0.9 : 0.35
+            const blockHandleR = dragTarget === 'block' ? 4 : 3
+            const corners = [
+                [blockX - blockSize / 2, blockTop],
+                [blockX + blockSize / 2, blockTop],
+                [blockX - blockSize / 2, surfY],
+                [blockX + blockSize / 2, surfY],
+            ]
+            corners.forEach(([cx, cy]) => {
+                ctx.fillStyle = `rgba(160, 100, 255, ${blockHandleAlpha})`
+                ctx.beginPath()
+                ctx.arc(cx, cy, blockHandleR, 0, Math.PI * 2)
+                ctx.fill()
+            })
+
             // Force arrow
             if (forceMag > 0) {
                 const arrowLen = Math.min(60, forceMag * 1.5)
@@ -206,6 +359,19 @@ export default function WorkEnergy() {
                 if (forceAngle > 0) {
                     ctx.fillText(`\u03B8 = ${forceAngle}\u00B0`, ax + adx / 2, ay + ady / 2 + 2)
                 }
+
+                // Force arrow tip grab handle
+                const forceHandleAlpha = dragTarget === 'force' ? 0.9 : 0.4
+                const forceHandleR = dragTarget === 'force' ? 7 : 5
+                ctx.fillStyle = `rgba(255, 100, 100, ${forceHandleAlpha})`
+                ctx.beginPath()
+                ctx.arc(ax + adx, ay + ady, forceHandleR, 0, Math.PI * 2)
+                ctx.fill()
+                ctx.strokeStyle = `rgba(255, 100, 100, ${forceHandleAlpha * 0.6})`
+                ctx.lineWidth = 1.5
+                ctx.beginPath()
+                ctx.arc(ax + adx, ay + ady, forceHandleR + 4, 0, Math.PI * 2)
+                ctx.stroke()
             }
 
             // Friction arrow
@@ -434,7 +600,7 @@ export default function WorkEnergy() {
 
         animId = requestAnimationFrame(draw)
         return () => { window.removeEventListener('resize', resize); cancelAnimationFrame(animId) }
-    }, [forceMag, forceAngle, mass, maxDisplacement, mu, height, forceType, paused, calcPhysics])
+    }, [forceMag, forceAngle, mass, maxDisplacement, mu, height, forceType, paused, calcPhysics, dragTarget])
 
     const currentPhysics = calcPhysics(posRef.current)
 
@@ -442,7 +608,14 @@ export default function WorkEnergy() {
         <div className="min-h-screen flex flex-col bg-[#0d0a1a] text-white overflow-hidden font-sans">
             <div className="flex-1 relative flex">
                 <div className="flex-1 relative">
-                    <canvas ref={canvasRef} className="w-full h-full block" />
+                    <canvas
+                        ref={canvasRef}
+                        className={`w-full h-full block ${dragTarget !== 'none' ? 'cursor-grabbing' : hoverTarget !== 'none' ? 'cursor-grab' : ''}`}
+                        onMouseDown={handleMouseDown}
+                        onMouseMove={handleMouseMove}
+                        onMouseUp={handleMouseUp}
+                        onMouseLeave={handleMouseLeave}
+                    />
 
                     <div className="absolute top-4 left-4 flex flex-col gap-3">
                         <APTag course="Physics 1" unit="Unit 3" color="rgb(160, 100, 255)" />

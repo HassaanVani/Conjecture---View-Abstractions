@@ -21,6 +21,16 @@ export default function ComptonScattering() {
     const phaseRef = useRef<'incoming' | 'collision' | 'scattered'>('incoming')
     const animProgressRef = useRef(0)
 
+    // --- Drag state for mouse interaction ---
+    const [canvasCursor, setCanvasCursor] = useState('default')
+    const draggingRef = useRef<'angle' | null>(null)
+    // Store layout geometry for mouse handlers
+    const layoutRef = useRef({
+        cx: 0, cy: 0,
+        angleHandleX: 0, angleHandleY: 0,
+        arcRadius: 50,
+    })
+
     const calcPhysics = useCallback(() => {
         const lambdaI = incidentWL * 1e-9 // incident wavelength in meters
         const thetaRad = scatterAngle * Math.PI / 180
@@ -73,6 +83,97 @@ export default function ComptonScattering() {
         setPlaying(true)
         resetAnim()
     }, [resetAnim])
+
+    // --- Mouse event handlers for canvas dragging ---
+    const getCanvasPos = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
+        const canvas = canvasRef.current
+        if (!canvas) return { x: 0, y: 0 }
+        const rect = canvas.getBoundingClientRect()
+        return { x: e.clientX - rect.left, y: e.clientY - rect.top }
+    }, [])
+
+    const handleMouseDown = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
+        const pos = getCanvasPos(e)
+        const layout = layoutRef.current
+
+        // Hit-test angle handle (small circle at end of angle arc)
+        const dx = pos.x - layout.angleHandleX
+        const dy = pos.y - layout.angleHandleY
+        if (Math.sqrt(dx * dx + dy * dy) < 20) {
+            draggingRef.current = 'angle'
+            setCanvasCursor('grabbing')
+            return
+        }
+
+        // Also allow clicking near the angle arc itself
+        const dxC = pos.x - layout.cx
+        const dyC = pos.y - layout.cy
+        const distFromCenter = Math.sqrt(dxC * dxC + dyC * dyC)
+        if (distFromCenter > 30 && distFromCenter < layout.arcRadius + 25) {
+            // Check if we're in the upper half (where the angle arc is)
+            const mouseAngle = Math.atan2(-(pos.y - layout.cy), pos.x - layout.cx)
+            if (mouseAngle > -0.1 && mouseAngle < Math.PI + 0.1) {
+                draggingRef.current = 'angle'
+                setCanvasCursor('grabbing')
+                // Immediately compute angle from mouse position
+                const angleDeg = Math.max(0, Math.min(180, mouseAngle * 180 / Math.PI))
+                const snapped = Math.round(angleDeg / 5) * 5
+                setScatterAngle(snapped)
+                resetAnim()
+                return
+            }
+        }
+    }, [getCanvasPos, resetAnim])
+
+    const handleMouseMove = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
+        const pos = getCanvasPos(e)
+        const layout = layoutRef.current
+
+        if (draggingRef.current === 'angle') {
+            // Compute angle from collision point to mouse
+            const dx = pos.x - layout.cx
+            const dy = -(pos.y - layout.cy) // invert Y for standard math coords
+            const angleRad = Math.atan2(dy, dx)
+            let angleDeg = angleRad * 180 / Math.PI
+            angleDeg = Math.max(0, Math.min(180, angleDeg))
+            const snapped = Math.round(angleDeg / 5) * 5
+            setScatterAngle(snapped)
+            resetAnim()
+            return
+        }
+
+        // Hover cursor logic
+        const dx = pos.x - layout.angleHandleX
+        const dy = pos.y - layout.angleHandleY
+        if (Math.sqrt(dx * dx + dy * dy) < 20) {
+            setCanvasCursor('grab')
+            return
+        }
+
+        // Near the arc
+        const dxC = pos.x - layout.cx
+        const dyC = pos.y - layout.cy
+        const distFromCenter = Math.sqrt(dxC * dxC + dyC * dyC)
+        if (distFromCenter > 30 && distFromCenter < layout.arcRadius + 25) {
+            const mouseAngle = Math.atan2(-(pos.y - layout.cy), pos.x - layout.cx)
+            if (mouseAngle > -0.1 && mouseAngle < Math.PI + 0.1) {
+                setCanvasCursor('grab')
+                return
+            }
+        }
+
+        setCanvasCursor('default')
+    }, [getCanvasPos, resetAnim])
+
+    const handleMouseUp = useCallback(() => {
+        draggingRef.current = null
+        setCanvasCursor('default')
+    }, [])
+
+    const handleMouseLeave = useCallback(() => {
+        draggingRef.current = null
+        setCanvasCursor('default')
+    }, [])
 
     const demoSteps = [
         { title: 'Compton Scattering', description: 'When a high-energy photon (X-ray) collides with a stationary electron, it scatters at an angle with a longer wavelength. This proved photons carry momentum like particles.', setup: () => { reset(); setScatterAngle(90) } },
@@ -396,7 +497,14 @@ export default function ComptonScattering() {
         <div className="min-h-screen flex flex-col bg-[#0d0a1a] text-white overflow-hidden font-sans">
             <div className="flex-1 relative flex">
                 <div className="flex-1 relative">
-                    <canvas ref={canvasRef} className="w-full h-full block" />
+                    <canvas
+                        ref={canvasRef}
+                        className={`w-full h-full block ${canvasCursor === 'grabbing' ? 'cursor-grabbing' : canvasCursor === 'grab' ? 'cursor-grab' : ''}`}
+                        onMouseDown={handleMouseDown}
+                        onMouseMove={handleMouseMove}
+                        onMouseUp={handleMouseUp}
+                        onMouseLeave={handleMouseLeave}
+                    />
 
                     <div className="absolute top-4 left-4 flex flex-col gap-3">
                         <APTag course="Physics 2" unit="Unit 15" color="rgb(160, 100, 255)" />

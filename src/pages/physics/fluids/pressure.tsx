@@ -26,6 +26,101 @@ export default function Pressure() {
     const timeRef = useRef(0)
     const initRef = useRef(false)
 
+    // --- Mouse drag state ---
+    const [dragging, setDragging] = useState<'depth' | 'piston' | null>(null)
+    const [hovered, setHovered] = useState<'depth' | 'piston' | null>(null)
+    // Store layout geometry so mouse handlers can reference it
+    const layoutRef = useRef<{
+        // hydrostatic
+        containerX: number; containerW: number; surfaceY: number; containerBottom: number; maxDepth: number
+        // pascal
+        smallPistonRect: { x: number; y: number; w: number; h: number } | null
+    }>({
+        containerX: 0, containerW: 0, surfaceY: 0, containerBottom: 0, maxDepth: 10,
+        smallPistonRect: null,
+    })
+
+    const getCanvasPos = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
+        const canvas = canvasRef.current
+        if (!canvas) return { x: 0, y: 0 }
+        const rect = canvas.getBoundingClientRect()
+        return { x: e.clientX - rect.left, y: e.clientY - rect.top }
+    }, [])
+
+    const handleMouseDown = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
+        const { x, y } = getCanvasPos(e)
+        const lay = layoutRef.current
+        if (viewMode === 'hydrostatic') {
+            // Hit-test the depth gauge line area
+            const fluidH = lay.containerBottom - lay.surfaceY
+            const depthFrac = depth / lay.maxDepth
+            const gaugeY = lay.surfaceY + depthFrac * fluidH
+            if (x >= lay.containerX - 15 && x <= lay.containerX + lay.containerW + 25 && Math.abs(y - gaugeY) < 18) {
+                setDragging('depth')
+                e.preventDefault()
+            }
+        } else {
+            // Hit-test the small piston in Pascal mode
+            const pr = lay.smallPistonRect
+            if (pr && x >= pr.x - 15 && x <= pr.x + pr.w + 15 && y >= pr.y - 30 && y <= pr.y + pr.h + 30) {
+                setDragging('piston')
+                e.preventDefault()
+            }
+        }
+    }, [viewMode, depth, getCanvasPos])
+
+    const handleMouseMove = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
+        const { x, y } = getCanvasPos(e)
+        const lay = layoutRef.current
+
+        if (dragging === 'depth' && viewMode === 'hydrostatic') {
+            const fluidH = lay.containerBottom - lay.surfaceY
+            const frac = Math.max(0, Math.min(1, (y - lay.surfaceY) / fluidH))
+            setDepth(Math.round(frac * lay.maxDepth * 10) / 10)
+            return
+        }
+        if (dragging === 'piston' && viewMode === 'pascal') {
+            // Map vertical mouse position to applied force (dragging lower = more force)
+            const pr = lay.smallPistonRect
+            if (pr) {
+                // Use a reference band: 200px of vertical drag maps to 10-1000 N
+                const baseline = pr.y
+                const delta = Math.max(0, y - baseline)
+                const force = Math.min(1000, Math.max(10, 10 + delta * 5))
+                setAppliedForce(Math.round(force / 10) * 10)
+            }
+            return
+        }
+
+        // Hover detection
+        if (viewMode === 'hydrostatic') {
+            const fluidH = lay.containerBottom - lay.surfaceY
+            const depthFrac = depth / lay.maxDepth
+            const gaugeY = lay.surfaceY + depthFrac * fluidH
+            if (x >= lay.containerX - 15 && x <= lay.containerX + lay.containerW + 25 && Math.abs(y - gaugeY) < 18) {
+                setHovered('depth')
+            } else {
+                setHovered(null)
+            }
+        } else {
+            const pr = lay.smallPistonRect
+            if (pr && x >= pr.x - 15 && x <= pr.x + pr.w + 15 && y >= pr.y - 30 && y <= pr.y + pr.h + 30) {
+                setHovered('piston')
+            } else {
+                setHovered(null)
+            }
+        }
+    }, [dragging, viewMode, depth, getCanvasPos])
+
+    const handleMouseUp = useCallback(() => {
+        setDragging(null)
+    }, [])
+
+    const handleMouseLeave = useCallback(() => {
+        setDragging(null)
+        setHovered(null)
+    }, [])
+
     const P_atm = showAtmospheric ? 101325 : 0
     const P_depth = fluidDensity * gravity * depth
     const P_total = P_atm + P_depth
@@ -111,6 +206,14 @@ export default function Pressure() {
                 const containerBottom = h * 0.88
                 const fluidH = containerBottom - surfaceY
                 const maxDepth = 10 // meters mapped to container height
+
+                // Store layout for mouse handlers
+                layoutRef.current.containerX = containerX
+                layoutRef.current.containerW = containerW
+                layoutRef.current.surfaceY = surfaceY
+                layoutRef.current.containerBottom = containerBottom
+                layoutRef.current.maxDepth = maxDepth
+                layoutRef.current.smallPistonRect = null
 
                 // Container walls
                 ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)'
@@ -210,6 +313,36 @@ export default function Pressure() {
                 ctx.lineTo(containerX + containerW + 12, gaugeY - 6)
                 ctx.closePath(); ctx.fill()
 
+                // Drag handle on depth gauge line
+                const handleAlpha = dragging === 'depth' ? 1.0 : hovered === 'depth' ? 0.8 : 0.4
+                const handleX = containerX + containerW / 2
+                // Center grab dot
+                ctx.fillStyle = `rgba(255, 100, 100, ${handleAlpha})`
+                ctx.beginPath(); ctx.arc(handleX, gaugeY, 6, 0, Math.PI * 2); ctx.fill()
+                // Up/down arrows
+                ctx.strokeStyle = `rgba(255, 100, 100, ${handleAlpha})`
+                ctx.lineWidth = 1.5
+                // Up arrow
+                ctx.beginPath()
+                ctx.moveTo(handleX, gaugeY - 10)
+                ctx.lineTo(handleX - 4, gaugeY - 6)
+                ctx.moveTo(handleX, gaugeY - 10)
+                ctx.lineTo(handleX + 4, gaugeY - 6)
+                ctx.stroke()
+                // Down arrow
+                ctx.beginPath()
+                ctx.moveTo(handleX, gaugeY + 10)
+                ctx.lineTo(handleX - 4, gaugeY + 6)
+                ctx.moveTo(handleX, gaugeY + 10)
+                ctx.lineTo(handleX + 4, gaugeY + 6)
+                ctx.stroke()
+                // "drag" hint text
+                if (hovered === 'depth' && dragging !== 'depth') {
+                    ctx.fillStyle = 'rgba(255, 100, 100, 0.6)'
+                    ctx.font = '10px system-ui'; ctx.textAlign = 'center'
+                    ctx.fillText('drag to change depth', handleX, gaugeY - 16)
+                }
+
                 // Pressure arrows at depth (larger = more pressure)
                 const numArrows = 7
                 const arrowScale = Math.min(35, 5 + depthFrac * 30)
@@ -307,6 +440,7 @@ export default function Pressure() {
 
             } else {
                 // --- PASCAL'S HYDRAULIC PRESS MODE ---
+                layoutRef.current.smallPistonRect = null // will be set when piston is drawn
                 const cx = w * 0.45
                 const cy = h * 0.5
 
@@ -366,11 +500,39 @@ export default function Pressure() {
                 ctx.fillRect(cx + tubeSep / 2 - largeR + 2, largeFluidTop, largeR * 2 - 4, bottomY - largeFluidTop)
 
                 // Small piston
-                ctx.fillStyle = 'rgba(180, 180, 200, 0.8)'
-                ctx.fillRect(cx - tubeSep / 2 - smallR + 3, smallFluidTop - 12, smallR * 2 - 6, 12)
-                ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)'
-                ctx.lineWidth = 1.5
-                ctx.strokeRect(cx - tubeSep / 2 - smallR + 3, smallFluidTop - 12, smallR * 2 - 6, 12)
+                const pistonX = cx - tubeSep / 2 - smallR + 3
+                const pistonY = smallFluidTop - 12
+                const pistonW = smallR * 2 - 6
+                const pistonH = 12
+                layoutRef.current.smallPistonRect = { x: pistonX, y: pistonY, w: pistonW, h: pistonH }
+
+                const pistonAlpha = dragging === 'piston' ? 1.0 : hovered === 'piston' ? 0.9 : 0.8
+                ctx.fillStyle = `rgba(180, 180, 200, ${pistonAlpha})`
+                ctx.fillRect(pistonX, pistonY, pistonW, pistonH)
+                ctx.strokeStyle = dragging === 'piston' ? 'rgba(255, 180, 80, 0.9)' : hovered === 'piston' ? 'rgba(255, 255, 255, 0.8)' : 'rgba(255, 255, 255, 0.5)'
+                ctx.lineWidth = dragging === 'piston' || hovered === 'piston' ? 2.5 : 1.5
+                ctx.strokeRect(pistonX, pistonY, pistonW, pistonH)
+
+                // Drag affordance on small piston
+                const pistonHandleAlpha = dragging === 'piston' ? 0.9 : hovered === 'piston' ? 0.7 : 0.3
+                ctx.fillStyle = `rgba(255, 180, 80, ${pistonHandleAlpha})`
+                const pistonCx = pistonX + pistonW / 2
+                const pistonCy = pistonY + pistonH / 2
+                // Horizontal grip lines
+                ctx.strokeStyle = `rgba(255, 255, 255, ${pistonHandleAlpha})`
+                ctx.lineWidth = 1
+                ctx.beginPath()
+                ctx.moveTo(pistonCx - 8, pistonCy - 2)
+                ctx.lineTo(pistonCx + 8, pistonCy - 2)
+                ctx.moveTo(pistonCx - 8, pistonCy + 2)
+                ctx.lineTo(pistonCx + 8, pistonCy + 2)
+                ctx.stroke()
+                // Drag hint
+                if (hovered === 'piston' && dragging !== 'piston') {
+                    ctx.fillStyle = 'rgba(255, 180, 80, 0.7)'
+                    ctx.font = '10px system-ui'; ctx.textAlign = 'center'
+                    ctx.fillText('drag down to apply force', pistonCx, pistonY - 18)
+                }
 
                 // Large piston
                 ctx.fillStyle = 'rgba(180, 180, 200, 0.8)'
@@ -453,13 +615,21 @@ export default function Pressure() {
 
         animId = requestAnimationFrame(draw)
         return () => { window.removeEventListener('resize', resize); cancelAnimationFrame(animId) }
-    }, [viewMode, fluidDensity, gravity, depth, showAtmospheric, pistonRatio, appliedForce, showParticles, paused, A1, A2])
+    }, [viewMode, fluidDensity, gravity, depth, showAtmospheric, pistonRatio, appliedForce, showParticles, paused, A1, A2, dragging, hovered])
 
     return (
         <div className="min-h-screen flex flex-col bg-[#0d0a1a] text-white overflow-hidden font-sans">
             <div className="flex-1 relative flex">
                 <div className="flex-1 relative">
-                    <canvas ref={canvasRef} className="w-full h-full block" />
+                    <canvas
+                        ref={canvasRef}
+                        className="w-full h-full block"
+                        style={{ cursor: dragging ? 'grabbing' : hovered ? 'grab' : 'default' }}
+                        onMouseDown={handleMouseDown}
+                        onMouseMove={handleMouseMove}
+                        onMouseUp={handleMouseUp}
+                        onMouseLeave={handleMouseLeave}
+                    />
 
                     <div className="absolute top-4 left-4 flex flex-col gap-3">
                         <APTag course="Physics 1" unit="Unit 8" color="rgb(160, 100, 255)" />

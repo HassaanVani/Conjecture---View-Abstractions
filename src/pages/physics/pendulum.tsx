@@ -24,6 +24,12 @@ export default function Pendulum() {
     const [showGraph, setShowGraph] = useState(true)
     const [useLargeAngle, setUseLargeAngle] = useState(true)
 
+    // Mouse drag state
+    const [isDragging, setIsDragging] = useState(false)
+    const [isHoveringBob, setIsHoveringBob] = useState(false)
+    const bobPosRef = useRef({ x: 0, y: 0 })
+    const pivotPosRef = useRef({ x: 0, y: 0 })
+
     const stateRef = useRef<{
         pend: PendState; trail: { x: number; y: number }[]
         history: { t: number; T: number }[]; t: number
@@ -41,6 +47,60 @@ export default function Pendulum() {
         }
         setIsRunning(false)
     }, [initialAngle])
+
+    // Mouse interaction handlers
+    const getCanvasPos = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
+        const canvas = canvasRef.current
+        if (!canvas) return { x: 0, y: 0 }
+        const rect = canvas.getBoundingClientRect()
+        return { x: e.clientX - rect.left, y: e.clientY - rect.top }
+    }, [])
+
+    const handleMouseDown = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
+        const pos = getCanvasPos(e)
+        const bob = bobPosRef.current
+        const dist = Math.sqrt((pos.x - bob.x) ** 2 + (pos.y - bob.y) ** 2)
+        if (dist < 30) {
+            setIsDragging(true)
+            setIsRunning(false)
+        }
+    }, [getCanvasPos])
+
+    const handleMouseMove = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
+        const pos = getCanvasPos(e)
+        const bob = bobPosRef.current
+        const dist = Math.sqrt((pos.x - bob.x) ** 2 + (pos.y - bob.y) ** 2)
+        setIsHoveringBob(!isDragging && dist < 30)
+
+        if (isDragging) {
+            const pivot = pivotPosRef.current
+            const dx = pos.x - pivot.x
+            const dy = pos.y - pivot.y
+            const newTheta = Math.atan2(dx, dy) // atan2(sin-component, cos-component) for pendulum coords
+            const clampedTheta = Math.max(-Math.PI * 0.95, Math.min(Math.PI * 0.95, newTheta))
+            stateRef.current.pend.theta = clampedTheta
+            stateRef.current.pend.omega = 0
+            stateRef.current.trail = []
+            stateRef.current.history = []
+            stateRef.current.t = 0
+            stateRef.current.ke = 0
+            stateRef.current.pe = gravity * (length / 100) * (1 - Math.cos(clampedTheta))
+            setInitialAngle(Math.round(clampedTheta * 180 / Math.PI))
+        }
+    }, [isDragging, getCanvasPos, gravity, length])
+
+    const handleMouseUp = useCallback(() => {
+        if (isDragging) {
+            setIsDragging(false)
+        }
+    }, [isDragging])
+
+    const handleMouseLeave = useCallback(() => {
+        if (isDragging) {
+            setIsDragging(false)
+        }
+        setIsHoveringBob(false)
+    }, [isDragging])
 
     // Period calculations
     const smallAnglePeriod = 2 * Math.PI * Math.sqrt(length / (gravity * 100))
@@ -124,6 +184,10 @@ export default function Pendulum() {
             const bobX = pivotX + length * Math.sin(st.theta)
             const bobY = pivotY + length * Math.cos(st.theta)
 
+            // Store positions for mouse hit-testing
+            bobPosRef.current = { x: bobX, y: bobY }
+            pivotPosRef.current = { x: pivotX, y: pivotY }
+
             // Pivot mount
             ctx.fillStyle = 'rgba(255, 255, 255, 0.15)'
             ctx.fillRect(pivotX - 30, pivotY - 6, 60, 6)
@@ -154,6 +218,25 @@ export default function Pendulum() {
             ctx.fillStyle = COLOR; ctx.shadowColor = 'rgba(160, 100, 255, 0.4)'; ctx.shadowBlur = 15
             ctx.beginPath(); ctx.arc(bobX, bobY, mode === 'physical' ? 8 : 18, 0, Math.PI * 2); ctx.fill()
             ctx.shadowBlur = 0
+
+            // Drag handle indicator (subtle dots around bob)
+            if (!isRunning) {
+                const bobRadius = mode === 'physical' ? 8 : 18
+                const handleRadius = bobRadius + 8
+                const dotCount = 6
+                for (let i = 0; i < dotCount; i++) {
+                    const a = (i / dotCount) * Math.PI * 2
+                    const dx = bobX + Math.cos(a) * handleRadius
+                    const dy = bobY + Math.sin(a) * handleRadius
+                    ctx.fillStyle = 'rgba(255, 255, 255, 0.25)'
+                    ctx.beginPath(); ctx.arc(dx, dy, 1.5, 0, Math.PI * 2); ctx.fill()
+                }
+                // "drag" label
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.3)'
+                ctx.font = '9px Inter, sans-serif'
+                ctx.textAlign = 'center'
+                ctx.fillText('drag', bobX, bobY + bobRadius + 18)
+            }
 
             // Trail
             if (showTrail && isRunning) {
@@ -243,7 +326,14 @@ export default function Pendulum() {
 
             <div className="flex-1 relative flex">
                 <div className="flex-1 relative">
-                    <canvas ref={canvasRef} className="w-full h-full block" />
+                    <canvas
+                        ref={canvasRef}
+                        className={`w-full h-full block ${isDragging ? 'cursor-grabbing' : isHoveringBob ? 'cursor-grab' : ''}`}
+                        onMouseDown={handleMouseDown}
+                        onMouseMove={handleMouseMove}
+                        onMouseUp={handleMouseUp}
+                        onMouseLeave={handleMouseLeave}
+                    />
 
                     <div className="absolute top-4 left-4">
                         <EquationDisplay departmentColor={COLOR} equations={[

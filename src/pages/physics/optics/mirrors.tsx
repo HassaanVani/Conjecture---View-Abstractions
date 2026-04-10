@@ -16,6 +16,80 @@ export default function Mirrors() {
     const [showImage, setShowImage] = useState(true)
     const [showLabels, setShowLabels] = useState(true)
 
+    // --- Mouse drag state ---
+    const [dragging, setDragging] = useState(false)
+    const [hovering, setHovering] = useState(false)
+    const dragRef = useRef(false)
+
+    const getCanvasCoords = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
+        const canvas = canvasRef.current
+        if (!canvas) return { x: 0, y: 0 }
+        const rect = canvas.getBoundingClientRect()
+        return { x: e.clientX - rect.left, y: e.clientY - rect.top }
+    }, [])
+
+    const handleMouseDown = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
+        const canvas = canvasRef.current
+        if (!canvas) return
+        const { x, y } = getCanvasCoords(e)
+        const w = canvas.offsetWidth
+        const h = canvas.offsetHeight
+        const mirrorX = w * 0.6
+        const axisY = h * 0.5
+        const objX = mirrorX - objectDist
+        const objTipY = axisY - objectHeight
+
+        // Hit test: within 20px of the arrow tip or the arrow shaft
+        const distToTip = Math.sqrt((x - objX) ** 2 + (y - objTipY) ** 2)
+        const distToShaft = Math.abs(x - objX)
+        const onShaftY = y >= Math.min(axisY, objTipY) - 10 && y <= Math.max(axisY, objTipY) + 10
+
+        if (distToTip < 20 || (distToShaft < 15 && onShaftY)) {
+            setDragging(true)
+            dragRef.current = true
+            e.preventDefault()
+        }
+    }, [objectDist, objectHeight, getCanvasCoords])
+
+    const handleMouseMove = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
+        const canvas = canvasRef.current
+        if (!canvas) return
+        const { x, y } = getCanvasCoords(e)
+        const w = canvas.offsetWidth
+        const h = canvas.offsetHeight
+        const mirrorX = w * 0.6
+        const axisY = h * 0.5
+
+        if (dragRef.current) {
+            // Update object distance from horizontal position
+            const newDist = Math.max(30, Math.min(400, mirrorX - x))
+            setObjectDist(Math.round(newDist / 5) * 5)
+
+            // Update object height from vertical position
+            const newHeight = Math.max(20, Math.min(120, axisY - y))
+            setObjectHeight(Math.round(newHeight / 5) * 5)
+        } else {
+            // Hover detection for cursor feedback
+            const objX = mirrorX - objectDist
+            const objTipY = axisY - objectHeight
+            const distToTip = Math.sqrt((x - objX) ** 2 + (y - objTipY) ** 2)
+            const distToShaft = Math.abs(x - objX)
+            const onShaftY = y >= Math.min(axisY, objTipY) - 10 && y <= Math.max(axisY, objTipY) + 10
+            setHovering(distToTip < 20 || (distToShaft < 15 && onShaftY))
+        }
+    }, [objectDist, objectHeight, getCanvasCoords])
+
+    const handleMouseUp = useCallback(() => {
+        setDragging(false)
+        dragRef.current = false
+    }, [])
+
+    const handleMouseLeave = useCallback(() => {
+        setDragging(false)
+        dragRef.current = false
+        setHovering(false)
+    }, [])
+
     const calcMirror = useCallback(() => {
         const f = mirrorType === 'flat' ? Infinity : (mirrorType === 'concave' ? radiusCurvature / 2 : -radiusCurvature / 2)
         const doVal = objectDist
@@ -192,6 +266,20 @@ export default function Mirrors() {
                 ctx.textAlign = 'center'
                 ctx.fillText('Object', objX, axisY + 20)
             }
+
+            // Grab handle at arrow tip
+            const handleRadius = dragging ? 7 : 5
+            const handleAlpha = dragging ? 0.9 : 0.5
+            ctx.fillStyle = `rgba(100, 255, 150, ${handleAlpha})`
+            ctx.beginPath()
+            ctx.arc(objX, axisY - objectHeight, handleRadius, 0, Math.PI * 2)
+            ctx.fill()
+            // Subtle ring
+            ctx.strokeStyle = `rgba(100, 255, 150, ${handleAlpha * 0.6})`
+            ctx.lineWidth = 1.5
+            ctx.beginPath()
+            ctx.arc(objX, axisY - objectHeight, handleRadius + 4, 0, Math.PI * 2)
+            ctx.stroke()
 
             // Calculate image
             const { di, imageHeight, isReal } = calcMirror()
@@ -396,7 +484,7 @@ export default function Mirrors() {
 
         animId = requestAnimationFrame(draw)
         return () => { window.removeEventListener('resize', resize); cancelAnimationFrame(animId) }
-    }, [mirrorType, radiusCurvature, objectDist, objectHeight, showRay1, showRay2, showRay3, showImage, showLabels, calcMirror])
+    }, [mirrorType, radiusCurvature, objectDist, objectHeight, showRay1, showRay2, showRay3, showImage, showLabels, calcMirror, dragging])
 
     const mirror = calcMirror()
 
@@ -404,7 +492,14 @@ export default function Mirrors() {
         <div className="min-h-screen flex flex-col bg-[#0d0a1a] text-white overflow-hidden font-sans">
             <div className="flex-1 relative flex">
                 <div className="flex-1 relative">
-                    <canvas ref={canvasRef} className="w-full h-full block" />
+                    <canvas
+                        ref={canvasRef}
+                        className={`w-full h-full block ${dragging ? 'cursor-grabbing' : hovering ? 'cursor-grab' : ''}`}
+                        onMouseDown={handleMouseDown}
+                        onMouseMove={handleMouseMove}
+                        onMouseUp={handleMouseUp}
+                        onMouseLeave={handleMouseLeave}
+                    />
 
                     <div className="absolute top-4 left-4 flex flex-col gap-3">
                         <APTag course="Physics 2" unit="Unit 13" color="rgb(160, 100, 255)" />

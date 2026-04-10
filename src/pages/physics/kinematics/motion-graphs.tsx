@@ -16,6 +16,128 @@ export default function MotionGraphs() {
     const timeRef = useRef(0)
     const trailRef = useRef<{ t: number; x: number; v: number; a: number }[]>([])
 
+    // --- Mouse drag state ---
+    const [draggingParticle, setDraggingParticle] = useState(false)
+    const [hoveringParticle, setHoveringParticle] = useState(false)
+    const dragParticleRef = useRef(false)
+    const wasPausedBeforeDrag = useRef(false)
+
+    const getCanvasCoords = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
+        const canvas = canvasRef.current
+        if (!canvas) return { x: 0, y: 0 }
+        const rect = canvas.getBoundingClientRect()
+        return { x: e.clientX - rect.left, y: e.clientY - rect.top }
+    }, [])
+
+    const handleMouseDown = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
+        const canvas = canvasRef.current
+        if (!canvas) return
+        const { x, y } = getCanvasCoords(e)
+        const w = canvas.offsetWidth
+        const h = canvas.offsetHeight
+
+        // Track geometry (must match draw code)
+        const trackLeft = 30
+        const trackRight = w * 0.42
+        const trackY = h * 0.5
+        const trackLen = trackRight - trackLeft
+        const xRange = 60
+        const pxPerUnit = trackLen / xRange
+
+        // Current particle pixel position
+        const params_cur = { x0, v0: v0 - refFrameV, a: motionMode === 'uniform' ? 0 : accel }
+        const t = timeRef.current
+        const xPos = params_cur.x0 + params_cur.v0 * t + 0.5 * params_cur.a * t * t
+        const clampedX = Math.max(-30, Math.min(30, xPos))
+        const particlePx = trackLeft + (clampedX + 30) * pxPerUnit
+
+        const distToParticle = Math.sqrt((x - particlePx) ** 2 + (y - trackY) ** 2)
+
+        if (distToParticle < 25) {
+            wasPausedBeforeDrag.current = paused
+            setPaused(true)
+            setDraggingParticle(true)
+            dragParticleRef.current = true
+            e.preventDefault()
+            return
+        }
+
+        // Click on velocity-time graph to set velocity
+        const graphLeft = w * 0.48
+        const graphRight = w - 20
+        const graphGap = 12
+        const graphAreaTop = 20
+        const graphAreaBot = h - 20
+        const graphH = (graphAreaBot - graphAreaTop - graphGap * 2) / 3
+        // v-t graph is the second one (index 1)
+        const vtTop = graphAreaTop + 1 * (graphH + graphGap)
+        const vtBot = vtTop + graphH
+
+        if (x >= graphLeft && x <= graphRight && y >= vtTop && y <= vtBot) {
+            const vMin = -15, vMax = 15
+            const clickedV = vMax - ((y - vtTop) / graphH) * (vMax - vMin)
+            const clampedV = Math.max(-10, Math.min(10, Math.round(clickedV * 2) / 2))
+            setV0(clampedV + refFrameV)
+            timeRef.current = 0
+            trailRef.current = []
+            e.preventDefault()
+        }
+    }, [x0, v0, accel, motionMode, refFrameV, paused, getCanvasCoords])
+
+    const handleMouseMove = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
+        const canvas = canvasRef.current
+        if (!canvas) return
+        const { x, y } = getCanvasCoords(e)
+        const w = canvas.offsetWidth
+        const h = canvas.offsetHeight
+
+        const trackLeft = 30
+        const trackRight = w * 0.42
+        const trackY = h * 0.5
+        const trackLen = trackRight - trackLeft
+        const xRange = 60
+        const pxPerUnit = trackLen / xRange
+
+        if (dragParticleRef.current) {
+            // Map mouse x back to physics units
+            const newXPos = ((x - trackLeft) / pxPerUnit) - 30
+            const clamped = Math.max(-20, Math.min(20, Math.round(newXPos)))
+            setX0(clamped)
+            timeRef.current = 0
+            trailRef.current = []
+        } else {
+            // Hover detection
+            const params_cur = { x0, v0: v0 - refFrameV, a: motionMode === 'uniform' ? 0 : accel }
+            const t = timeRef.current
+            const xPos = params_cur.x0 + params_cur.v0 * t + 0.5 * params_cur.a * t * t
+            const clampedX = Math.max(-30, Math.min(30, xPos))
+            const particlePx = trackLeft + (clampedX + 30) * pxPerUnit
+            const distToParticle = Math.sqrt((x - particlePx) ** 2 + (y - trackY) ** 2)
+            setHoveringParticle(distToParticle < 25)
+        }
+    }, [x0, v0, accel, motionMode, refFrameV, getCanvasCoords])
+
+    const handleMouseUp = useCallback(() => {
+        if (dragParticleRef.current) {
+            dragParticleRef.current = false
+            setDraggingParticle(false)
+            if (!wasPausedBeforeDrag.current) {
+                setPaused(false)
+            }
+        }
+    }, [])
+
+    const handleMouseLeave = useCallback(() => {
+        if (dragParticleRef.current) {
+            dragParticleRef.current = false
+            setDraggingParticle(false)
+            if (!wasPausedBeforeDrag.current) {
+                setPaused(false)
+            }
+        }
+        setHoveringParticle(false)
+    }, [])
+
     const getParams = useCallback(() => {
         if (motionMode === 'uniform') return { x0, v0, a: 0 }
         if (motionMode === 'accelerating') return { x0, v0, a: accel }
@@ -141,6 +263,12 @@ export default function MotionGraphs() {
 
             ctx.fillStyle = 'rgb(160, 100, 255)'
             ctx.beginPath(); ctx.arc(particlePx, trackY, 8, 0, Math.PI * 2); ctx.fill()
+
+            // Grab handle ring around particle
+            const handleAlpha = draggingParticle ? 0.9 : 0.35
+            ctx.strokeStyle = `rgba(160, 100, 255, ${handleAlpha})`
+            ctx.lineWidth = draggingParticle ? 2.5 : 1.5
+            ctx.beginPath(); ctx.arc(particlePx, trackY, 14, 0, Math.PI * 2); ctx.stroke()
 
             // Velocity arrow on particle
             if (Math.abs(vel) > 0.2) {
@@ -327,7 +455,7 @@ export default function MotionGraphs() {
 
         animId = requestAnimationFrame(draw)
         return () => { window.removeEventListener('resize', resize); cancelAnimationFrame(animId) }
-    }, [x0, v0, accel, motionMode, showConnections, paused, refFrameV, getParams])
+    }, [x0, v0, accel, motionMode, showConnections, paused, refFrameV, getParams, draggingParticle])
 
     const params = getParams()
     const t = timeRef.current
@@ -339,7 +467,14 @@ export default function MotionGraphs() {
         <div className="min-h-screen flex flex-col bg-[#0d0a1a] text-white overflow-hidden font-sans">
             <div className="flex-1 relative flex">
                 <div className="flex-1 relative">
-                    <canvas ref={canvasRef} className="w-full h-full block" />
+                    <canvas
+                        ref={canvasRef}
+                        className={`w-full h-full block ${draggingParticle ? 'cursor-grabbing' : hoveringParticle ? 'cursor-grab' : ''}`}
+                        onMouseDown={handleMouseDown}
+                        onMouseMove={handleMouseMove}
+                        onMouseUp={handleMouseUp}
+                        onMouseLeave={handleMouseLeave}
+                    />
 
                     <div className="absolute top-4 left-4 flex flex-col gap-3">
                         <APTag course="Physics 1" unit="Unit 1" color="rgb(160, 100, 255)" />

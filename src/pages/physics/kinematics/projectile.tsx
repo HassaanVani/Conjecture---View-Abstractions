@@ -23,6 +23,13 @@ export default function ProjectileMotion() {
     const [showTrajectoryPreview, setShowTrajectoryPreview] = useState(true)
     const [comparisonMode, setComparisonMode] = useState<'none' | 'angles' | 'drag'>('none')
 
+    // Mouse drag (slingshot) state
+    const [isDraggingSlingshot, setIsDraggingSlingshot] = useState(false)
+    const [isHoveringLaunch, setIsHoveringLaunch] = useState(false)
+    const [dragMouse, setDragMouse] = useState<{ x: number; y: number } | null>(null)
+    const launchScreenPosRef = useRef({ x: 0, y: 0 })
+    const scaleRef = useRef(1)
+
     const stateRef = useRef({
         t: 0, x: 0, y: 0, vx: 0, vy: 0,
         trail: [] as TrailPoint[],
@@ -40,6 +47,79 @@ export default function ProjectileMotion() {
     }, [v0, angle, height])
 
     useEffect(() => { if (!isRunning) reset() }, [v0, angle, height, gravity, reset, isRunning])
+
+    // Mouse interaction handlers
+    const getCanvasPos = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
+        const canvas = canvasRef.current
+        if (!canvas) return { x: 0, y: 0 }
+        const rect = canvas.getBoundingClientRect()
+        return { x: e.clientX - rect.left, y: e.clientY - rect.top }
+    }, [])
+
+    const handleMouseDown = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
+        if (isRunning) return
+        const pos = getCanvasPos(e)
+        const lp = launchScreenPosRef.current
+        const dist = Math.sqrt((pos.x - lp.x) ** 2 + (pos.y - lp.y) ** 2)
+        if (dist < 30) {
+            setIsDraggingSlingshot(true)
+            setDragMouse(pos)
+        }
+    }, [getCanvasPos, isRunning])
+
+    const handleMouseMove = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
+        const pos = getCanvasPos(e)
+
+        if (!isDraggingSlingshot) {
+            // Hover detection near launch point
+            if (!isRunning) {
+                const lp = launchScreenPosRef.current
+                const dist = Math.sqrt((pos.x - lp.x) ** 2 + (pos.y - lp.y) ** 2)
+                setIsHoveringLaunch(dist < 30)
+            }
+            return
+        }
+
+        setDragMouse(pos)
+
+        // Compute angle and speed from slingshot drag
+        const lp = launchScreenPosRef.current
+        const dx = pos.x - lp.x
+        const dy = -(pos.y - lp.y) // flip Y since screen Y is inverted
+        const dragAngle = Math.atan2(dy, dx) * 180 / Math.PI
+        const dragDist = Math.sqrt(dx * dx + dy * dy)
+
+        // Map drag distance to speed (longer drag = faster)
+        const mappedSpeed = Math.min(100, Math.max(5, dragDist * 0.5))
+        // Clamp angle to 0-90 range
+        const clampedAngle = Math.max(0, Math.min(90, Math.round(dragAngle)))
+
+        setAngle(clampedAngle)
+        setV0(Math.round(mappedSpeed))
+    }, [isDraggingSlingshot, getCanvasPos, isRunning])
+
+    const handleMouseUp = useCallback(() => {
+        if (isDraggingSlingshot) {
+            setIsDraggingSlingshot(false)
+            setDragMouse(null)
+            // Fire the projectile
+            const rad2 = angle * Math.PI / 180
+            stateRef.current = {
+                t: 0, x: 0, y: height,
+                vx: v0 * Math.cos(rad2), vy: v0 * Math.sin(rad2),
+                trail: [], comparisonTrails: [],
+            }
+            setIsRunning(true)
+        }
+    }, [isDraggingSlingshot, angle, v0, height])
+
+    const handleMouseLeave = useCallback(() => {
+        if (isDraggingSlingshot) {
+            setIsDraggingSlingshot(false)
+            setDragMouse(null)
+        }
+        setIsHoveringLaunch(false)
+    }, [isDraggingSlingshot])
 
     // Computed values
     const rad = angle * Math.PI / 180
@@ -102,6 +182,10 @@ export default function ProjectileMotion() {
 
             const toX = (x: number) => originX + x * scale
             const toY = (y: number) => originY - y * scale
+
+            // Store launch screen position for mouse interaction
+            launchScreenPosRef.current = { x: toX(0), y: toY(height) }
+            scaleRef.current = scale
 
             // Physics update
             if (isRunning) {
@@ -244,6 +328,73 @@ export default function ProjectileMotion() {
             ctx.beginPath(); ctx.arc(cx, cy, 7, 0, Math.PI * 2); ctx.fill()
             ctx.shadowBlur = 0
 
+            // Slingshot drag visualization
+            if (!isRunning) {
+                const lpx = toX(0), lpy = toY(height)
+                // Draw grab handle dots around launch point
+                const handleRadius = 14
+                for (let i = 0; i < 6; i++) {
+                    const a = (i / 6) * Math.PI * 2
+                    ctx.fillStyle = 'rgba(255, 255, 255, 0.25)'
+                    ctx.beginPath()
+                    ctx.arc(lpx + Math.cos(a) * handleRadius, lpy + Math.sin(a) * handleRadius, 1.5, 0, Math.PI * 2)
+                    ctx.fill()
+                }
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.3)'
+                ctx.font = '9px Inter, sans-serif'
+                ctx.textAlign = 'center'
+                ctx.fillText('drag to launch', lpx, lpy + 22)
+            }
+
+            if (isDraggingSlingshot && dragMouse) {
+                const lpx = toX(0), lpy = toY(height)
+                // Draw arrow from launch point to mouse
+                ctx.strokeStyle = 'rgba(255, 200, 100, 0.7)'
+                ctx.lineWidth = 2
+                ctx.beginPath()
+                ctx.moveTo(lpx, lpy)
+                ctx.lineTo(dragMouse.x, dragMouse.y)
+                ctx.stroke()
+
+                // Arrowhead
+                const arrowAngle = Math.atan2(dragMouse.y - lpy, dragMouse.x - lpx)
+                ctx.fillStyle = 'rgba(255, 200, 100, 0.7)'
+                ctx.beginPath()
+                ctx.moveTo(dragMouse.x, dragMouse.y)
+                ctx.lineTo(dragMouse.x - 10 * Math.cos(arrowAngle - 0.35), dragMouse.y - 10 * Math.sin(arrowAngle - 0.35))
+                ctx.lineTo(dragMouse.x - 10 * Math.cos(arrowAngle + 0.35), dragMouse.y - 10 * Math.sin(arrowAngle + 0.35))
+                ctx.closePath()
+                ctx.fill()
+
+                // Label with angle and speed
+                const midX = (lpx + dragMouse.x) / 2
+                const midY = (lpy + dragMouse.y) / 2
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.8)'
+                ctx.font = '11px Inter, sans-serif'
+                ctx.textAlign = 'center'
+                ctx.fillText(`${angle}° | ${v0} m/s`, midX, midY - 12)
+
+                // Draw predicted trajectory while dragging
+                const predRad = angle * Math.PI / 180
+                const predVx = v0 * Math.cos(predRad)
+                const predVy = v0 * Math.sin(predRad)
+                const predTTotal = (predVy + Math.sqrt(predVy * predVy + 2 * gravity * height)) / gravity
+
+                ctx.strokeStyle = 'rgba(255, 200, 100, 0.3)'
+                ctx.setLineDash([4, 6])
+                ctx.lineWidth = 1.5
+                ctx.beginPath()
+                for (let t = 0; t <= predTTotal * 1.05; t += predTTotal / 150) {
+                    const px = predVx * t
+                    const py = height + predVy * t - 0.5 * gravity * t * t
+                    if (py < 0) break
+                    if (t === 0) ctx.moveTo(toX(px), toY(py))
+                    else ctx.lineTo(toX(px), toY(py))
+                }
+                ctx.stroke()
+                ctx.setLineDash([])
+            }
+
             // Velocity vectors
             if (showVectors) {
                 const vScale = scale * 0.8
@@ -288,7 +439,7 @@ export default function ProjectileMotion() {
         animId = requestAnimationFrame(animate)
 
         return () => { window.removeEventListener('resize', resize); cancelAnimationFrame(animId) }
-    }, [v0, angle, height, gravity, isRunning, timeScale, showVectors, airResistance, dragCoeff, showTrajectoryPreview, comparisonMode, xMax, yMax, tTotal, vx0, vy0, rad])
+    }, [v0, angle, height, gravity, isRunning, timeScale, showVectors, airResistance, dragCoeff, showTrajectoryPreview, comparisonMode, xMax, yMax, tTotal, vx0, vy0, rad, isDraggingSlingshot, dragMouse])
 
     return (
         <div className="min-h-screen flex flex-col bg-[#0d0a1a] text-white overflow-hidden">
@@ -318,7 +469,14 @@ export default function ProjectileMotion() {
 
             <div className="flex-1 relative flex">
                 <div className="flex-1 relative">
-                    <canvas ref={canvasRef} className="w-full h-full block" />
+                    <canvas
+                        ref={canvasRef}
+                        className={`w-full h-full block ${isDraggingSlingshot ? 'cursor-grabbing' : isHoveringLaunch ? 'cursor-grab' : ''}`}
+                        onMouseDown={handleMouseDown}
+                        onMouseMove={handleMouseMove}
+                        onMouseUp={handleMouseUp}
+                        onMouseLeave={handleMouseLeave}
+                    />
 
                     <div className="absolute top-4 left-4">
                         <EquationDisplay

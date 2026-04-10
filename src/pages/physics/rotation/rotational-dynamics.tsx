@@ -38,6 +38,93 @@ export default function RotationalDynamics() {
     const omegaRef = useRef(0)
     const historyRef = useRef<{ t: number; theta: number; omega: number; alpha: number }[]>([])
 
+    // --- Mouse drag state ---
+    const [dragging, setDragging] = useState<'wheel' | null>(null)
+    const [hovered, setHovered] = useState<'wheel' | null>(null)
+    // Store layout geometry for mouse handlers
+    const layoutRef = useRef<{
+        wheelCx: number; wheelCy: number; wheelR: number
+    }>({ wheelCx: 0, wheelCy: 0, wheelR: 0 })
+    const lastMouseAngleRef = useRef<number | null>(null)
+    const lastMouseTimeRef = useRef<number>(0)
+
+    const getCanvasPos = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
+        const canvas = canvasRef.current
+        if (!canvas) return { x: 0, y: 0 }
+        const rect = canvas.getBoundingClientRect()
+        return { x: e.clientX - rect.left, y: e.clientY - rect.top }
+    }, [])
+
+    const handleMouseDown = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
+        const { x, y } = getCanvasPos(e)
+        const lay = layoutRef.current
+        const dist = Math.hypot(x - lay.wheelCx, y - lay.wheelCy)
+        // Hit-test near the rim (within 20px inside/outside the rim)
+        if (dist > lay.wheelR * 0.5 && dist < lay.wheelR + 25) {
+            setDragging('wheel')
+            lastMouseAngleRef.current = Math.atan2(y - lay.wheelCy, x - lay.wheelCx)
+            lastMouseTimeRef.current = performance.now()
+            e.preventDefault()
+        }
+    }, [getCanvasPos])
+
+    const handleMouseMove = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
+        const { x, y } = getCanvasPos(e)
+        const lay = layoutRef.current
+
+        if (dragging === 'wheel') {
+            const currentAngle = Math.atan2(y - lay.wheelCy, x - lay.wheelCx)
+            const prevAngle = lastMouseAngleRef.current
+            if (prevAngle !== null) {
+                // Calculate angular displacement
+                let dAngle = currentAngle - prevAngle
+                // Normalize to [-PI, PI]
+                if (dAngle > Math.PI) dAngle -= 2 * Math.PI
+                if (dAngle < -Math.PI) dAngle += 2 * Math.PI
+
+                const now = performance.now()
+                const dtMs = Math.max(1, now - lastMouseTimeRef.current)
+                lastMouseTimeRef.current = now
+
+                // Angular velocity from mouse tangential motion (rad/s)
+                const mouseOmega = (dAngle / dtMs) * 1000
+
+                // Apply as torque: map mouse angular velocity to torque value
+                // Clamp to a reasonable range
+                const torqueFromMouse = Math.max(0, Math.min(20, Math.abs(mouseOmega) * 2))
+                setAppliedTorque(Math.round(torqueFromMouse * 2) / 2)
+
+                // Also directly adjust omega for immediate feedback
+                omegaRef.current += dAngle * 3
+            }
+            lastMouseAngleRef.current = currentAngle
+            return
+        }
+
+        // Hover detection
+        const dist = Math.hypot(x - lay.wheelCx, y - lay.wheelCy)
+        if (dist > lay.wheelR * 0.5 && dist < lay.wheelR + 25) {
+            setHovered('wheel')
+        } else {
+            setHovered(null)
+        }
+    }, [dragging, getCanvasPos])
+
+    const handleMouseUp = useCallback(() => {
+        if (dragging === 'wheel') {
+            lastMouseAngleRef.current = null
+        }
+        setDragging(null)
+    }, [dragging])
+
+    const handleMouseLeave = useCallback(() => {
+        if (dragging === 'wheel') {
+            lastMouseAngleRef.current = null
+        }
+        setDragging(null)
+        setHovered(null)
+    }, [dragging])
+
     const I = momentOfInertia(shape, mass, radius)
     const netTorque = mode === 'constant' ? appliedTorque - frictionTorque : -frictionTorque
     const alpha = netTorque / I
@@ -115,6 +202,11 @@ export default function RotationalDynamics() {
             const wheelR = Math.min(120, Math.min(w, h) * 0.18) * (radius / 2)
             const numSpokes = 8
 
+            // Store layout for mouse handlers
+            layoutRef.current.wheelCx = cx
+            layoutRef.current.wheelCy = cy
+            layoutRef.current.wheelR = wheelR
+
             // Draw wheel glow
             const glow = ctx.createRadialGradient(cx, cy, wheelR * 0.5, cx, cy, wheelR * 1.4)
             glow.addColorStop(0, 'rgba(160, 100, 255, 0.08)')
@@ -157,6 +249,48 @@ export default function RotationalDynamics() {
             // Center hub
             ctx.fillStyle = 'rgba(160, 100, 255, 0.8)'
             ctx.beginPath(); ctx.arc(cx, cy, 6, 0, Math.PI * 2); ctx.fill()
+
+            // Drag affordance on wheel rim
+            const rimAlpha = dragging === 'wheel' ? 0.8 : hovered === 'wheel' ? 0.5 : 0.15
+            if (rimAlpha > 0.1) {
+                // Highlight ring around rim
+                ctx.strokeStyle = `rgba(255, 180, 80, ${rimAlpha})`
+                ctx.lineWidth = dragging === 'wheel' ? 4 : 2
+                ctx.setLineDash(dragging === 'wheel' ? [] : [6, 4])
+                ctx.beginPath(); ctx.arc(cx, cy, wheelR, 0, Math.PI * 2); ctx.stroke()
+                ctx.setLineDash([])
+
+                // Small circular arrow affordance at 3 o'clock position on rim
+                const affordAngle = thetaRef.current
+                const affordX = cx + Math.cos(affordAngle) * wheelR
+                const affordY = cy + Math.sin(affordAngle) * wheelR
+                ctx.fillStyle = `rgba(255, 180, 80, ${rimAlpha})`
+                ctx.beginPath(); ctx.arc(affordX, affordY, dragging === 'wheel' ? 6 : 4, 0, Math.PI * 2); ctx.fill()
+
+                // Curved arrow hint near the rim
+                if (hovered === 'wheel' && !dragging) {
+                    ctx.strokeStyle = 'rgba(255, 180, 80, 0.5)'
+                    ctx.lineWidth = 1.5
+                    const hintR = wheelR + 15
+                    ctx.beginPath()
+                    ctx.arc(cx, cy, hintR, -0.4, 0.4)
+                    ctx.stroke()
+                    // Arrowhead
+                    const tipA = 0.4
+                    const tipX = cx + Math.cos(tipA) * hintR
+                    const tipY = cy + Math.sin(tipA) * hintR
+                    ctx.fillStyle = 'rgba(255, 180, 80, 0.5)'
+                    ctx.beginPath()
+                    ctx.moveTo(tipX, tipY)
+                    ctx.lineTo(tipX - 3, tipY - 8)
+                    ctx.lineTo(tipX + 6, tipY - 3)
+                    ctx.closePath(); ctx.fill()
+
+                    ctx.fillStyle = 'rgba(255, 180, 80, 0.6)'
+                    ctx.font = '10px system-ui'; ctx.textAlign = 'center'
+                    ctx.fillText('drag rim to spin', cx, cy + wheelR + 42)
+                }
+            }
 
             // Angular velocity arc arrow
             if (Math.abs(omegaRef.current) > 0.01) {
@@ -322,7 +456,14 @@ export default function RotationalDynamics() {
         <div className="min-h-screen flex flex-col bg-[#0d0a1a] text-white overflow-hidden font-sans">
             <div className="flex-1 relative flex">
                 <div className="flex-1 relative">
-                    <canvas ref={canvasRef} className="w-full h-full block" />
+                    <canvas
+                        ref={canvasRef}
+                        className={`w-full h-full block ${dragging === 'wheel' ? 'cursor-grabbing' : hovered === 'wheel' ? 'cursor-grab' : ''}`}
+                        onMouseDown={handleMouseDown}
+                        onMouseMove={handleMouseMove}
+                        onMouseUp={handleMouseUp}
+                        onMouseLeave={handleMouseLeave}
+                    />
 
                     <div className="absolute top-4 left-4 flex flex-col gap-3">
                         <APTag course="Physics 1" unit="Unit 5" color="rgb(160, 100, 255)" />
