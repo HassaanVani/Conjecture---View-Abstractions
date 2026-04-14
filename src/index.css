@@ -42,10 +42,10 @@
   --radius-md: 8px;
   --radius-lg: 12px;
 
-  /* Shadows — elevation, not glow */
-  --shadow-sm: 0 1px 2px rgba(0,0,0,0.3);
-  --shadow-md: 0 4px 12px rgba(0,0,0,0.4);
-  --shadow-lg: 0 8px 24px rgba(0,0,0,0.5);
+  /* Shadows — layered for realistic depth */
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.3), 0 0 0 1px rgba(255,255,255,0.03);
+  --shadow-md: 0 4px 12px rgba(0,0,0,0.4), 0 1px 3px rgba(0,0,0,0.2), 0 0 0 1px rgba(255,255,255,0.04);
+  --shadow-lg: 0 8px 32px rgba(0,0,0,0.5), 0 2px 8px rgba(0,0,0,0.3), 0 0 0 1px rgba(255,255,255,0.05);
 }
 
 @layer base {
@@ -60,6 +60,9 @@
   body {
     @apply bg-bg text-text font-display antialiased;
     min-height: 100vh;
+    background-image:
+      radial-gradient(ellipse 80% 50% at 50% 0%, rgba(160, 100, 255, 0.03), transparent),
+      radial-gradient(ellipse 60% 40% at 80% 100%, rgba(100, 140, 255, 0.02), transparent);
   }
 
   ::-webkit-scrollbar {
@@ -157,18 +160,37 @@
     outline-offset: 2px;
   }
 
-  /* Cards — solid surface, elevation */
+  /* Glass surface */
+  .glass {
+    background: rgba(44, 44, 46, 0.6);
+    backdrop-filter: blur(20px) saturate(1.4);
+    -webkit-backdrop-filter: blur(20px) saturate(1.4);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+  }
+
+  .glass-subtle {
+    background: rgba(44, 44, 46, 0.4);
+    backdrop-filter: blur(12px) saturate(1.2);
+    -webkit-backdrop-filter: blur(12px) saturate(1.2);
+    border: 1px solid rgba(255, 255, 255, 0.04);
+  }
+
+  /* Cards — glass surface, elevation */
   .hub-card {
     @apply relative p-6 cursor-pointer transition-all duration-300;
     border-radius: var(--radius-lg);
-    background: var(--color-bg-elevated);
+    background: rgba(44, 44, 46, 0.5);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
     box-shadow: var(--shadow-sm);
+    border: 1px solid rgba(255, 255, 255, 0.04);
   }
 
   .hub-card:hover {
     transform: translateY(-2px);
     box-shadow: var(--shadow-md);
-    border: 1px solid var(--color-border-hover);
+    background: rgba(44, 44, 46, 0.7);
+    border-color: rgba(255, 255, 255, 0.1);
   }
 
   .hub-card-title {
@@ -177,6 +199,59 @@
 
   .hub-card-desc {
     @apply text-sm text-text-secondary leading-relaxed;
+  }
+
+  /* Slider — colored track fill */
+  input[type="range"] {
+    --track-color: rgba(255, 255, 255, 0.08);
+    appearance: none;
+    -webkit-appearance: none;
+    background: transparent;
+  }
+
+  input[type="range"]::-webkit-slider-runnable-track {
+    height: 4px;
+    border-radius: 2px;
+    background: var(--track-color);
+  }
+
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: white;
+    margin-top: -5px;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.1);
+    cursor: grab;
+    transition: transform 0.15s, box-shadow 0.15s;
+  }
+
+  input[type="range"]::-webkit-slider-thumb:hover {
+    transform: scale(1.15);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.15);
+  }
+
+  input[type="range"]::-webkit-slider-thumb:active {
+    cursor: grabbing;
+    transform: scale(1.05);
+  }
+
+  input[type="range"]::-moz-range-track {
+    height: 4px;
+    border-radius: 2px;
+    background: var(--track-color);
+    border: none;
+  }
+
+  input[type="range"]::-moz-range-thumb {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: white;
+    border: none;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+    cursor: grab;
   }
 }
 

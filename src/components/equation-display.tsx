@@ -31,7 +31,12 @@ export function EquationDisplay({
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3, delay: 0.3 }}
-            className={cn('bg-bg-elevated rounded-[--radius-lg] shadow-[--shadow-sm] overflow-hidden', className)}
+            className={cn('rounded-[--radius-lg] shadow-[--shadow-sm] overflow-hidden border border-white/[0.06]', className)}
+            style={{
+                background: 'rgba(44, 44, 46, 0.6)',
+                backdropFilter: 'blur(16px) saturate(1.3)',
+                WebkitBackdropFilter: 'blur(16px) saturate(1.3)',
+            }}
         >
             <button
                 onClick={() => setCollapsed(!collapsed)}

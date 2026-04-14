@@ -18,7 +18,7 @@ export default function Layout({ children }: LayoutProps) {
     return (
         <div className="min-h-screen bg-bg">
             {!isHome && (
-                <header className="fixed top-0 left-0 right-0 z-50 bg-bg border-b border-border">
+                <header className="fixed top-0 left-0 right-0 z-50 border-b border-white/[0.06]" style={{ background: 'rgba(29, 29, 31, 0.7)', backdropFilter: 'blur(20px) saturate(1.4)', WebkitBackdropFilter: 'blur(20px) saturate(1.4)' }}>
                     <div className="max-w-7xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
                         <Link to="/" className="flex items-center hover:opacity-80 transition-opacity">
                             <span className="text-base font-medium tracking-tight">Conjecture</span>

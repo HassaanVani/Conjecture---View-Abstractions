@@ -49,9 +49,14 @@ export function DemoMode({
                 exit={{ opacity: 0, y: 16 }}
                 transition={{ duration: 0.25 }}
                 className={cn(
-                    'bg-bg-elevated rounded-[--radius-lg] shadow-[--shadow-lg] max-w-md w-full',
+                    'rounded-[--radius-lg] shadow-[--shadow-lg] max-w-md w-full border border-white/[0.08]',
                     className
                 )}
+                style={{
+                    background: 'rgba(44, 44, 46, 0.75)',
+                    backdropFilter: 'blur(24px) saturate(1.5)',
+                    WebkitBackdropFilter: 'blur(24px) saturate(1.5)',
+                }}
             >
                 {/* Header */}
                 <div className="flex items-center justify-between px-5 pt-4 pb-3">

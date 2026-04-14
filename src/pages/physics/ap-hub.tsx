@@ -147,7 +147,7 @@ export default function PhysicsHub() {
                                         className={`group block ${viz.comingSoon ? 'cursor-not-allowed opacity-50' : ''}`}
                                         onClick={(e) => viz.comingSoon && e.preventDefault()}
                                     >
-                                        <div className="bg-bg-elevated rounded-[--radius-lg] p-4 shadow-[--shadow-sm] transition-all duration-200 hover:shadow-[--shadow-md] hover:-translate-y-0.5">
+                                        <div className="rounded-[--radius-lg] p-4 shadow-[--shadow-sm] transition-all duration-250 hover:shadow-[--shadow-md] hover:-translate-y-1 border border-white/[0.04] hover:border-white/[0.1]" style={{ background: 'linear-gradient(135deg, rgba(44,44,46,0.6), rgba(44,44,46,0.4))' }}>
                                             <h3 className="text-sm font-medium text-text mb-1 group-hover:text-text transition-colors">
                                                 {viz.title}
                                             </h3>

@@ -13,7 +13,12 @@ export function ControlPanel({ children, className }: ControlPanelProps) {
             initial={{ opacity: 0, x: -16 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.3, delay: 0.15 }}
-            className={cn('bg-bg-elevated rounded-[--radius-lg] shadow-[--shadow-md] p-4 space-y-3', className)}
+            className={cn('rounded-[--radius-lg] shadow-[--shadow-md] p-4 space-y-3 border border-white/[0.06]', className)}
+            style={{
+                background: 'rgba(44, 44, 46, 0.5)',
+                backdropFilter: 'blur(12px)',
+                WebkitBackdropFilter: 'blur(12px)',
+            }}
         >
             {children}
         </motion.div>

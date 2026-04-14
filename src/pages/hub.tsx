@@ -104,44 +104,80 @@ export default function Hub() {
     const [activeDept, setActiveDept] = useState<Department>('math')
     const currentDept = departments.find(d => d.id === activeDept)!
 
+    const vizCounts: Record<Department, number> = {
+        math: 7, physics: 61, calculus: 10, biology: 9, chemistry: 10, cs: 8, economics: 27,
+    }
+
     return (
-        <div className="min-h-screen bg-bg">
+        <div className="min-h-screen bg-bg relative overflow-hidden">
+            {/* Ambient background gradient keyed to active department */}
+            <AnimatePresence mode="wait">
+                <motion.div
+                    key={activeDept}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.8 }}
+                    className="fixed inset-0 pointer-events-none"
+                    style={{
+                        background: `radial-gradient(ellipse 70% 50% at 30% 20%, ${currentDept.color.replace('rgb', 'rgba').replace(')', ', 0.04)')}, transparent), radial-gradient(ellipse 50% 40% at 70% 80%, ${currentDept.color.replace('rgb', 'rgba').replace(')', ', 0.025)')}, transparent)`,
+                    }}
+                />
+            </AnimatePresence>
+
             <div className="relative z-10 px-5 sm:px-8 py-10 sm:py-14 max-w-6xl mx-auto">
                 {/* Header */}
                 <motion.header
                     initial={{ opacity: 0, y: -20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.5 }}
-                    className="mb-10"
+                    className="mb-12"
                 >
-                    <h1 className="text-4xl sm:text-5xl md:text-6xl font-light tracking-tight mb-1">
+                    <h1 className="text-4xl sm:text-5xl md:text-6xl font-light tracking-tight mb-2">
                         Conjecture
                     </h1>
+                    <p className="text-text-muted text-sm">132 interactive visualizations across 7 disciplines</p>
                 </motion.header>
 
-                {/* Department Tabs — text only */}
+                {/* Department Tabs */}
                 <motion.nav
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.4, delay: 0.1 }}
                     className="mb-10 sm:mb-12"
                 >
-                    <div className="flex flex-wrap gap-1">
+                    <div className="flex flex-wrap gap-1.5">
                         {departments.map((dept) => {
                             const isActive = activeDept === dept.id
+                            const Icon = dept.icon
                             return (
                                 <button
                                     key={dept.id}
                                     onClick={() => setActiveDept(dept.id)}
                                     className={`
-                                        px-3.5 py-2 rounded-[--radius-md] text-sm font-medium transition-all duration-200
+                                        flex items-center gap-2 px-4 py-2.5 rounded-[--radius-md] text-sm font-medium transition-all duration-250
                                         ${isActive
-                                            ? 'bg-bg-elevated text-text'
-                                            : 'text-text-muted hover:text-text-secondary hover:bg-bg-elevated/50'
+                                            ? 'text-text shadow-[--shadow-sm]'
+                                            : 'text-text-muted hover:text-text-secondary'
                                         }
                                     `}
+                                    style={isActive ? {
+                                        background: 'rgba(44, 44, 46, 0.7)',
+                                        backdropFilter: 'blur(12px)',
+                                        WebkitBackdropFilter: 'blur(12px)',
+                                        border: `1px solid ${dept.color.replace('rgb', 'rgba').replace(')', ', 0.2)')}`,
+                                    } : {
+                                        background: 'transparent',
+                                        border: '1px solid transparent',
+                                    }}
                                 >
-                                    {dept.name}
+                                    <Icon className="w-4 h-4" style={isActive ? { color: dept.color } : undefined} />
+                                    <span>{dept.name}</span>
+                                    <span
+                                        className="text-[10px] tabular-nums ml-0.5 opacity-40"
+                                    >
+                                        {vizCounts[dept.id]}
+                                    </span>
                                 </button>
                             )
                         })}
@@ -163,14 +199,23 @@ export default function Hub() {
                                 key={viz.id}
                                 initial={{ opacity: 0, y: 12 }}
                                 animate={{ opacity: 1, y: 0 }}
-                                transition={{ duration: 0.3, delay: index * 0.05 }}
+                                transition={{ duration: 0.3, delay: index * 0.04 }}
                             >
                                 <Link to={viz.to} className="group block">
-                                    <div className="bg-bg-elevated rounded-[--radius-lg] p-5 shadow-[--shadow-sm] transition-all duration-200 hover:shadow-[--shadow-md] hover:-translate-y-0.5 hover:border hover:border-border-hover">
-                                        <h3 className="hub-card-title group-hover:text-text transition-colors">
+                                    <div
+                                        className="rounded-[--radius-lg] p-5 shadow-[--shadow-sm] transition-all duration-250 hover:shadow-[--shadow-md] hover:-translate-y-1 border border-white/[0.04] hover:border-white/[0.1]"
+                                        style={{
+                                            background: `linear-gradient(135deg, rgba(44, 44, 46, 0.6) 0%, rgba(44, 44, 46, 0.4) 100%)`,
+                                        }}
+                                    >
+                                        <div
+                                            className="w-1 h-4 rounded-full mb-3 opacity-40 group-hover:opacity-70 transition-opacity"
+                                            style={{ backgroundColor: currentDept.color }}
+                                        />
+                                        <h3 className="text-[15px] font-medium text-text mb-1 group-hover:text-text transition-colors">
                                             {viz.title}
                                         </h3>
-                                        <p className="hub-card-desc">
+                                        <p className="text-text-secondary text-[13px] leading-relaxed">
                                             {viz.description}
                                         </p>
                                     </div>
@@ -185,7 +230,7 @@ export default function Hub() {
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     transition={{ delay: 0.5 }}
-                    className="mt-16 text-center text-text-dim text-xs tracking-wider"
+                    className="mt-20 text-center text-text-dim text-xs tracking-wider"
                 >
                     Interactive explorations across disciplines
                 </motion.footer>

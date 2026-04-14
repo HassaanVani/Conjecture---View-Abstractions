@@ -26,7 +26,12 @@ export function InfoPanel({
             initial={{ opacity: 0, x: 16 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.3, delay: 0.2 }}
-            className={cn('bg-bg-elevated rounded-[--radius-lg] shadow-[--shadow-sm] px-4 py-3', className)}
+            className={cn('rounded-[--radius-lg] shadow-[--shadow-sm] px-4 py-3 border border-white/[0.06]', className)}
+            style={{
+                background: 'rgba(44, 44, 46, 0.6)',
+                backdropFilter: 'blur(16px) saturate(1.3)',
+                WebkitBackdropFilter: 'blur(16px) saturate(1.3)',
+            }}
         >
             {title && (
                 <h3
@@ -64,11 +69,15 @@ export function APTag({ course, unit, className, color = 'rgb(160, 100, 255)' }:
     return (
         <div
             className={cn(
-                'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-[--radius-md] text-[10px] font-semibold tracking-wide',
-                'bg-bg-tertiary',
+                'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-[--radius-md] text-[10px] font-semibold tracking-wide border border-white/[0.06]',
                 className
             )}
-            style={{ color }}
+            style={{
+                color,
+                background: 'rgba(58, 58, 60, 0.6)',
+                backdropFilter: 'blur(8px)',
+                WebkitBackdropFilter: 'blur(8px)',
+            }}
         >
             <span>{course}</span>
             {unit && (
